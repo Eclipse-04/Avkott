@@ -1,20 +1,15 @@
-#the mod name as displayed in-game
-displayName: "Kotlin Mod Template"
 
-#the internal name of your mod
-name: "example-kotlin-mod"
+displayName: "Avkott"
 
-#your name
-author: "You"
+name: "avkott"
+
+author: "[sky]Eclipse"
 
 #the fully qualified main class of the mod
-main: "example.ExampleKotlinMod"
+main: "avkott.Avkott"
 
-#the mod description as seen in the mod dialog
-description: "A Mindustry Kotlin mod template."
+description: "Mindustry Erekir mod moment"
 
-#the mod version
-version: 1.0
+version: 0.1
 
-#the minimum game build required to run this mod
-minGameVersion: 129
+minGameVersion: 136
