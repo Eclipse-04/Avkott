@@ -1,6 +1,6 @@
 package avkott
 
-import avkott.content.AvkBlocks
+import avkott.content.*
 import mindustry.mod.*
 
 class Avkott : Mod(){
@@ -10,6 +10,10 @@ class Avkott : Mod(){
     }
 
     override fun loadContent(){
+        AvkFx.load()
+        AvkStatusEffects.load()
+        AvkLiquids.load()
+        AvkUnitTypes.load()
         AvkBlocks.load()
     }
 }

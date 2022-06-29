@@ -2,27 +2,34 @@ package avkott.content
 
 import arc.graphics.Color
 import arc.math.Interp
-import mindustry.content.Fx
-import mindustry.content.Items
-import mindustry.entities.Effect
+import avkott.content.AvkLiquids.liquidNitrogen
+import mindustry.content.*
+import mindustry.entities.bullet.LiquidBulletType
 import mindustry.entities.bullet.ShrapnelBulletType
-import mindustry.entities.effect.MultiEffect
 import mindustry.entities.part.DrawPart.PartMove
 import mindustry.entities.part.DrawPart.PartProgress
 import mindustry.entities.part.RegionPart
-import mindustry.entities.pattern.ShootPattern
+import mindustry.entities.pattern.ShootSpread
 import mindustry.graphics.Pal
 import mindustry.type.Category
 import mindustry.type.ItemStack
+import mindustry.type.PayloadStack
 import mindustry.world.Block
 import mindustry.world.blocks.defense.turrets.ItemTurret
+import mindustry.world.blocks.defense.turrets.LiquidTurret
 import mindustry.world.blocks.production.WallCrafter
+import mindustry.world.blocks.units.UnitAssembler
+import mindustry.world.blocks.units.UnitAssembler.AssemblerUnitPlan
+import mindustry.world.blocks.units.UnitFactory
 import mindustry.world.draw.DrawTurret
 import mindustry.world.meta.Attribute
 
 object AvkBlocks {
     lateinit var cliffPulverizer: Block
     lateinit var ingen: Block
+    lateinit var vapor: Block
+    lateinit var mechCrafter: Block
+    lateinit var vesselFabricator: Block
 
     fun load(){
         //production
@@ -35,6 +42,7 @@ object AvkBlocks {
             output = Items.sand
             fogRadius = 4
             itemCapacity = 30
+            health = 560
         }
         //endregion
         //turret
@@ -62,7 +70,6 @@ object AvkBlocks {
                         progress = PartProgress.reload.curve(Interp.pow2In)
                         moveY = -1f
                         heatColor = Color.valueOf("f03b0e")
-                        mirror = false
                         under = true
                     },
                     RegionPart("-sus").apply {
@@ -77,7 +84,8 @@ object AvkBlocks {
                     }
                 )
             }
-            recoil = 0.5f
+            health = 750
+            recoil = 1f
             outlineColor = Pal.darkOutline
             shootY = 10f
             range = 110f
@@ -85,8 +93,84 @@ object AvkBlocks {
             ammoPerShot = 2
             reload = 20f
         }
-        //endregion
-        //crafter
 
+        vapor = LiquidTurret("vapor").apply {
+            requirements(Category.turret, ItemStack.with(Items.beryllium, 90, Items.tungsten, 30, Items.silicon, 75))
+
+            ammo(
+                Liquids.nitrogen, LiquidBulletType(liquidNitrogen).apply {
+                    ammoMultiplier = 2f
+                    knockback = 2f
+                    drag = 0.01f
+                    trailLength = 7
+                    trailWidth = 3f
+                    trailColor = Liquids.nitrogen.color
+                    speed = 5.3f
+                    lifetime = 40f
+                }
+            )
+
+            drawer = DrawTurret().apply {
+                parts.add(RegionPart("-part").apply {
+                    progress = PartProgress.warmup
+                    x = -0.5f
+                    y = 0.5f
+                    moveX = 0.5f
+                    moveY = -0.5f
+                    under = true
+                    mirror = true
+                })
+            }
+            heatColor = Color.valueOf("b2c5d0")
+            size = 2
+            reload = 3f
+            range = 130f
+            shoot = ShootSpread(2, 12f)
+            velocityRnd = 0.12f
+            recoil = 0.5f
+            liquidCapacity = 35f
+            health = 750
+            shootY = 1f
+            inaccuracy = 10f
+            cooldownTime = 60f
+            shootEffect = Fx.shootSmallColor
+        }
+        //endregion
+        //region units
+        vesselFabricator = object : UnitFactory("vessel-fabricator") {
+            init {
+                this.requirements(
+                    Category.units,
+                    ItemStack.with(Items.silicon, 250, Items.beryllium, 200, Items.tungsten, 120)
+                )
+                size = 3
+                configurable = false
+                plans.add(
+                    UnitPlan(
+                        AvkUnitTypes.aver,
+                        3000f,
+                        ItemStack.with(Items.graphite, 65, Items.silicon, 70)
+                    )
+                )
+                regionSuffix = "-dark"
+                fogRadius = 5
+                researchCostMultiplier = 0.5f
+                consumePower(3.0f)
+            }
+        }
+
+        mechCrafter = UnitAssembler("mech-crafter").apply {
+            requirements(
+                Category.units,
+                ItemStack.with(Items.beryllium, 220, Items.silicon, 200, Items.tungsten, 70, Items.oxide, 40)
+            )
+            size = 3
+            consumePower(2.1f)
+            plans.add(
+                AssemblerUnitPlan(AvkUnitTypes.elud, 30 * 60f, PayloadStack.list(UnitTypes.elude, 2, UnitTypes.merui, 1))
+            )
+            areaSize = 8
+            consumeLiquid(Liquids.hydrogen, 8 / 60f)
+        }
     }
 }
