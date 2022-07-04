@@ -92,7 +92,7 @@ object AvkUnitTypes {
                         trailLength = 5
                         splashDamageRadius = 23f
                         splashDamage = 40f
-
+                        buildingDamageMultiplier = 0.2f
                         despawnEffect = MultiEffect(Fx.hitSquaresColor, WaveEffect().apply {
                             colorFrom = Pal.techBlue.also { colorTo = it }
                             sizeTo = splashDamageRadius + 3f
@@ -137,9 +137,7 @@ object AvkUnitTypes {
                 bullet = BasicBulletType(1f, 20f).apply {
                     keepVelocity = false
                     collidesTeam = true
-                    healPercent = 3f
-                    homingPower = 0.19f
-                    homingDelay = 4f
+                    healAmount = 50f
                     drag = -0.06f
                     width = 9f
                     height = 14f

@@ -27,7 +27,7 @@ repositories{
 }
 
 dependencies{
-    compileOnly ("com.github.Anuken.MindustryJitpack:core:935b478139")
+    compileOnly ("com.github.Anuken.MindustryJitpack:core:dbc2aa4cb7")
     compileOnly ("com.github.Anuken.Arc:arc-core:dfcb21ce56")
 }
 
