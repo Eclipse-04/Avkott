@@ -26,11 +26,16 @@ import mindustry.type.unit.MissileUnitType
 import mindustry.world.Block
 import mindustry.world.blocks.defense.turrets.ItemTurret
 import mindustry.world.blocks.defense.turrets.LiquidTurret
+import mindustry.world.blocks.heat.HeatProducer
 import mindustry.world.blocks.production.WallCrafter
 import mindustry.world.blocks.units.UnitAssembler
 import mindustry.world.blocks.units.UnitAssembler.AssemblerUnitPlan
 import mindustry.world.blocks.units.UnitFactory
 import mindustry.world.blocks.units.UnitFactory.UnitPlan
+import mindustry.world.draw.DrawDefault
+import mindustry.world.draw.DrawGlowRegion
+import mindustry.world.draw.DrawHeatOutput
+import mindustry.world.draw.DrawMulti
 import mindustry.world.draw.DrawTurret
 import mindustry.world.meta.Attribute
 
@@ -39,6 +44,7 @@ object AvkBlocks {
     lateinit var ingen: Block
     lateinit var vapor: Block
     lateinit var barrage: Block
+    lateinit var heatComburstor: Block
     lateinit var mechCrafter: Block
     lateinit var vesselFabricator: Block
     lateinit var beryliumBomb: Block
@@ -158,6 +164,7 @@ object AvkBlocks {
             reload = 80f
             ammoPerShot = 5
             range = 512f
+            targetGround = false
 
             shoot = ShootAlternate().apply {
                 shots = 8
@@ -190,6 +197,7 @@ object AvkBlocks {
                         fogRadius = 5f
                         health = 50f
                         weapons.add(Weapon().apply {
+                            targetGround = false
                             shootCone = 360f
                             mirror = false
                             reload = 1f
@@ -198,6 +206,7 @@ object AvkBlocks {
                             shake = 3f
                             bullet = ExplosionBulletType(60f, 12f).apply {
                                 shootEffect = Fx.explosion
+                                collidesGround = false
                             }
                         })
                     }
@@ -237,6 +246,28 @@ object AvkBlocks {
                 }
             )
             drawer = DrawTurret("reinforced-")
+        }
+        //endregion
+        //region power
+        heatComburstor = HeatProducer("heat-comburstor").apply {
+            requirements(
+                Category.crafting,
+                ItemStack.with(Items.tungsten, 30, Items.oxide, 20, Items.graphite, 50)
+            )
+            heatOutput = 5f
+            consumeLiquid(Liquids.hydrogen, 0.008333334f)
+            consumeItem(Items.graphite)
+            size = 2
+            health = 550
+            drawer = DrawMulti(
+                DrawDefault(),
+                DrawGlowRegion().apply{ color = Liquids.hydrogen.color },
+                DrawHeatOutput()
+            )
+            regionRotated1 = 1
+            rotateDraw = false
+            craftTime = 120f
+
         }
         //endregion
         //region units
