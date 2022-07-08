@@ -33,11 +33,7 @@ import mindustry.world.blocks.units.UnitAssembler
 import mindustry.world.blocks.units.UnitAssembler.AssemblerUnitPlan
 import mindustry.world.blocks.units.UnitFactory
 import mindustry.world.blocks.units.UnitFactory.UnitPlan
-import mindustry.world.draw.DrawDefault
-import mindustry.world.draw.DrawGlowRegion
-import mindustry.world.draw.DrawHeatOutput
-import mindustry.world.draw.DrawMulti
-import mindustry.world.draw.DrawTurret
+import mindustry.world.draw.*
 import mindustry.world.meta.Attribute
 
 object AvkBlocks {
@@ -50,10 +46,9 @@ object AvkBlocks {
     lateinit var mechCrafter: Block
     lateinit var vesselFabricator: Block
     lateinit var beryliumBomb: Block
-
-    fun load(){
+    fun load() {
         //production
-        cliffPulverizer = WallCrafter("cliff-pulverizer").apply{
+        cliffPulverizer = WallCrafter("cliff-pulverizer").apply {
             requirements(Category.production, ItemStack.with(Items.beryllium, 90, Items.silicon, 50, Items.tungsten, 75))
             consumePower(1.2f)
             drillTime = 69.66f
@@ -66,7 +61,7 @@ object AvkBlocks {
         }
         //endregion
         //turret
-        ingen = ItemTurret("ingen").apply{
+        ingen = ItemTurret("ingen").apply {
             requirements(Category.turret, ItemStack.with(Items.beryllium, 80, Items.graphite, 45, Items.silicon, 35))
 
             ammo(Items.graphite, ShrapnelBulletType().apply {
@@ -231,18 +226,22 @@ object AvkBlocks {
             health = 550
             drawer = DrawMulti(
                 DrawDefault(),
-                DrawGlowRegion().apply{ color = Liquids.hydrogen.color },
+                DrawGlowRegion().apply { color = Liquids.hydrogen.color },
                 DrawHeatOutput()
             )
             regionRotated1 = 1
             rotateDraw = false
             craftTime = 120f
-
         }
         payloadMixer = PayloadCrafter("payload-mixer").apply {
             requirements(
                 Category.crafting,
                 ItemStack.with(Items.beryllium, 1)
+            )
+            recipes.addAll(
+                PayloadCrafter.Recipe(heatComburstor, 120f, emptyArray()),
+                PayloadCrafter.Recipe(this, 120f, emptyArray()),
+                PayloadCrafter.Recipe(barrage, 120f, emptyArray()),
             )
             health = 1100
             size = 5
