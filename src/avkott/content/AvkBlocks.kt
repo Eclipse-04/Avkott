@@ -5,10 +5,7 @@ import arc.math.Interp
 import avkott.content.AvkLiquids.liquidNitrogen
 import avkott.world.block.defend.Bomb
 import avkott.world.block.payload.PayloadCrafter
-import mindustry.content.Fx
-import mindustry.content.Items
-import mindustry.content.Liquids
-import mindustry.content.UnitTypes
+import mindustry.content.*
 import mindustry.entities.bullet.BasicBulletType
 import mindustry.entities.bullet.ExplosionBulletType
 import mindustry.entities.bullet.LiquidBulletType
@@ -239,9 +236,12 @@ object AvkBlocks {
                 ItemStack.with(Items.beryllium, 1)
             )
             recipes.addAll(
-                PayloadCrafter.Recipe(heatComburstor, 120f, emptyArray()),
-                PayloadCrafter.Recipe(this, 120f, emptyArray()),
-                PayloadCrafter.Recipe(barrage, 120f, emptyArray()),
+                PayloadCrafter.Recipe(Blocks.reinforcedContainer, 120f,
+                    ItemStack.with(Items.beryllium, 30, Items.graphite, 15),
+                    ItemStack.with(Items.graphite, 50)),
+                PayloadCrafter.Recipe(Blocks.berylliumWall, 120f,
+                    emptyArray(),
+                    emptyArray())
             )
             health = 1100
             size = 5
