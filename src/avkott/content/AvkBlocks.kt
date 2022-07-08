@@ -4,6 +4,7 @@ import arc.graphics.Color
 import arc.math.Interp
 import avkott.content.AvkLiquids.liquidNitrogen
 import avkott.world.block.defend.Bomb
+import avkott.world.block.payload.PayloadCrafter
 import mindustry.content.Fx
 import mindustry.content.Items
 import mindustry.content.Liquids
@@ -45,6 +46,7 @@ object AvkBlocks {
     lateinit var vapor: Block
     lateinit var barrage: Block
     lateinit var heatComburstor: Block
+    lateinit var payloadMixer: Block
     lateinit var mechCrafter: Block
     lateinit var vesselFabricator: Block
     lateinit var beryliumBomb: Block
@@ -165,6 +167,7 @@ object AvkBlocks {
             ammoPerShot = 5
             range = 512f
             targetGround = false
+            consumeLiquid(Liquids.hydrogen, 0.1f)
 
             shoot = ShootAlternate().apply {
                 shots = 8
@@ -210,39 +213,6 @@ object AvkBlocks {
                             }
                         })
                     }
-                },
-
-                Items.tungsten, BasicBulletType(0f, 1f).apply {
-                    ammoMultiplier = 2f
-                    hitColor = Pal.tungstenShot
-                    shootEffect = Fx.shootBigColor
-                    smokeEffect = AvkFx.shootSmokeMissileSmall
-
-                    spawnUnit = MissileUnitType("tungsten-rocket").apply {
-                        speed = 4.6f
-                        maxRange = 3f
-                        lifetime = 60 * 2f
-                        outlineColor = Pal.darkOutline
-                        engineColor = Pal.tungstenShot
-                        trailColor = engineColor
-                        rotateSpeed = 3f
-                        trailLength = 5
-                        missileAccelTime = 20f
-                        lowAltitude = true
-
-                        health = 80f
-                        weapons.add(Weapon().apply {
-                            shootCone = 360f
-                            mirror = false
-                            reload = 1f
-                            deathExplosionEffect = Fx.explosion
-                            shootOnDeath = true
-                            shake = 3f
-                            bullet = ExplosionBulletType(90f, 20f).apply {
-                                shootEffect = Fx.explosion
-                            }
-                        })
-                    }
                 }
             )
             drawer = DrawTurret("reinforced-")
@@ -268,6 +238,14 @@ object AvkBlocks {
             rotateDraw = false
             craftTime = 120f
 
+        }
+        payloadMixer = PayloadCrafter("payload-mixer").apply {
+            requirements(
+                Category.crafting,
+                ItemStack.with(Items.beryllium, 1)
+            )
+            health = 1100
+            size = 5
         }
         //endregion
         //region units
