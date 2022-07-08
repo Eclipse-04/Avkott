@@ -1,21 +1,25 @@
 package avkott.world.block.payload
 
+import arc.graphics.Color
 import arc.graphics.g2d.Draw
 import arc.scene.ui.layout.Table
 import arc.struct.Seq
-import mindustry.Vars
-import mindustry.content.Items
 import mindustry.gen.Building
 import mindustry.type.Item
+import mindustry.ui.Styles
 import mindustry.world.Block
 import mindustry.world.blocks.ItemSelection
 import mindustry.world.blocks.payloads.BuildPayload
 import mindustry.world.blocks.payloads.PayloadBlock
 
+@Suppress("PLATFORM_CLASS_MAPPED_TO_KOTLIN")
 class PayloadCrafter(name: String) : PayloadBlock(name) {
+    /**
+     * The recipe must contain a unique [Recipe.payload]
+     */
     var recipes = Seq<Recipe>(4)
 
-    inner class Recipe(val payload: Block, val time: Float, val requirements: Array<Item>)
+    class Recipe(val payload: Block, val time: Float, val requirements: Array<Item>)
 
     init {
         hasItems = true
@@ -30,18 +34,21 @@ class PayloadCrafter(name: String) : PayloadBlock(name) {
         solid = true
         configurable = true
         clearOnDoubleTap = true
+        saveConfig = true
 
-        config(Int::class.java) { tile: PayloadCrafterBuild, i: Int ->
+        config(java.lang.Integer::class.java) { tile: PayloadCrafterBuild, i: Integer ->
             if (!configurable) return@config
-            if (tile.currentRecipe == i) return@config
-            tile.currentRecipe = if (i < 0 || i >= recipes.size) -1 else i
-            tile.progress = 0f
+            val new = i.toInt()
+            if (tile.currentRecipe != new) {
+                tile.currentRecipe = new.coerceIn(0, recipes.size - 1)
+                tile.progress = 0f
+            }
         }
     }
+
     inner class PayloadCrafterBuild : PayloadBlockBuild<BuildPayload>() {
         var currentRecipe = -1
         var progress = 0f
-
         override fun updateTile() {
             super.updateTile()
             if (currentRecipe != -1 && efficiency > 0f) {
@@ -52,25 +59,38 @@ class PayloadCrafter(name: String) : PayloadBlock(name) {
         }
 
         override fun buildConfiguration(table: Table) {
-            //liplum help aaaaaaaaaaaaaaaaaaaaaAAAAAAAAAA
-        }
+            val payloads: Seq<Block> = recipes.map { it.payload }.filter {
+                it.unlockedNow()
+            }
 
+            if (payloads.any()) {
+                ItemSelection.buildTable(this@PayloadCrafter, table, payloads,
+                    { if (currentRecipe < 0) null else recipes[currentRecipe].payload }
+                ) {
+                    configure(recipes.indexOf { recipe -> recipe.payload == it })
+                }
+            } else {
+                table.table(Styles.black3) { t: Table -> t.add("@none").color(Color.lightGray) }
+            }
+        }
         //modify soon
         fun canExport(): Boolean {
             return progress >= 1f
         }
 
         override fun acceptItem(source: Building, item: Item): Boolean {
-            if (currentRecipe > 0){
+            if (currentRecipe > 0) {
                 val recipe = recipes.get(currentRecipe)
                 return super.acceptItem(source, item) && recipe.requirements.contains(item)
             } else {
                 return false
             }
         }
+
+        override fun config() = currentRecipe
+
         override fun draw() {
             Draw.rect(region, x, y)
-
             //draw input
             var fallback = true
             for (i in 0..3) {
