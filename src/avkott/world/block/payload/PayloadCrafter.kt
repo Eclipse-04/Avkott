@@ -20,6 +20,7 @@ import mindustry.graphics.Layer
 import mindustry.graphics.Pal
 import mindustry.type.Item
 import mindustry.type.ItemStack
+import mindustry.ui.Bar
 import mindustry.ui.ItemDisplay
 import mindustry.ui.Styles
 import mindustry.world.Block
@@ -41,6 +42,7 @@ class PayloadCrafter(name: String) : PayloadBlock(name) {
     var overheatScale = 1f
     var maxEfficiency = 4f
     var warmupSpeed = 0.019f
+    var hasHeat = false
 
     class Recipe(
         val payload: Block,
@@ -80,14 +82,35 @@ class PayloadCrafter(name: String) : PayloadBlock(name) {
     }
 
     override fun init() {
-        super.init()
         consumePowerDynamic { b: PayloadCrafterBuild ->
             if (b.currentRecipeIndex != -1) recipes[b.currentRecipeIndex].power else 0f
         }
+        hasHeat = recipes.any { it.heat > 0f }
+        // Initialize others before vanilla one
+        super.init()
     }
 
     override fun icons(): Array<TextureRegion> {
         return arrayOf(region, inRegion, outRegion, topRegion)
+    }
+
+    override fun setBars() {
+        super.setBars()
+        if (hasHeat) {
+            addBar<PayloadCrafterBuild>("heat") {
+                Bar(
+                    { bundle.format("bar.heatpercent", it.heat.toInt(), (it.efficiencyScale() * 100).toInt()) },
+                    { Pal.lightOrange },
+                    {
+                        if (it.enabledRecipe) {
+                            it.currentRecipe.run {
+                                if (heat > 0f) it.heat / heat
+                                else 0f
+                            }
+                        } else 0f
+                    })
+            }
+        }
     }
 
     override fun drawPlanRegion(plan: BuildPlan, list: Eachable<BuildPlan>) {
@@ -165,28 +188,35 @@ class PayloadCrafter(name: String) : PayloadBlock(name) {
 
         override fun updateTile() {
             super.updateTile()
-            if (enabledRecipe && efficiency > 0.01f) {
+            if (enabledRecipe) {
                 val recipe = currentRecipe
                 heat = if (recipe.heat > 0f) calculateHeat(sideHeat)
                 else 0f
-                if (canExport()) {
-                    moveOutPayload()
-                } else if (moveInPayload()) {
-                    if (canCraft()) {
-                        if (progress < 1f) progress += getProgressIncrease(recipe.time) else {
-                            progress %= 1f
-                            craftEffect.at(x, y)
-                            payload.build.items.remove(recipe.requirements)
-                            payload.build.items.add(recipe.output) // done
-                        }
-                    } else exporting = true
+                if (efficiency > 0.01f) {
+                    if (canExport()) {
+                        moveOutPayload()
+                    } else if (moveInPayload()) {
+                        if (canCraft()) {
+                            if (progress < 1f) progress += getProgressIncrease(recipe.time) else {
+                                progress %= 1f
+                                craftEffect.at(x, y)
+                                payload.build.items.remove(recipe.requirements)
+                                payload.build.items.add(recipe.output) // done
+                            }
+                        } else exporting = true
+                    }
                 }
+            } else {
+                heat = 0f
             }
             warmup = Mathf.approachDelta(warmup, warmupTarget(), warmupSpeed)
         }
 
         fun canCraft(): Boolean {
-            return currentRecipeIndex != -1 && payload.build.items.has(currentRecipe.requirements)
+            val payBuild = payload?.build
+            return if (payBuild != null)
+                enabledRecipe && payBuild.items.has(currentRecipe.requirements)
+            else false
         }
 
         override fun shouldConsume(): Boolean {

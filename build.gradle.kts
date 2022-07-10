@@ -34,3 +34,6 @@ mindustry {
         mindustry be latest
     }
 }
+mindustryAssets {
+    root at "$projectDir/assets"
+}
