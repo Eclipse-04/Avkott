@@ -233,18 +233,18 @@ object AvkBlocks {
         payloadMixer = PayloadCrafter("payload-mixer").apply {
             requirements(
                 Category.crafting,
-                ItemStack.with(Items.beryllium, 1)
+                ItemStack.with(Items.tungsten, 120, Items.silicon, 200, Items.oxide, 40, Items.thorium, 80)
             )
             recipes.addAll(
-                PayloadCrafter.Recipe(Blocks.reinforcedContainer, 120f,
-                    ItemStack.with(Items.beryllium, 30, Items.graphite, 15),
-                    ItemStack.with(Items.graphite, 50)),
-                PayloadCrafter.Recipe(Blocks.berylliumWall, 120f,
-                    emptyArray(),
-                    emptyArray())
+                PayloadCrafter.Recipe(Blocks.reinforcedContainer, 45f,
+                    ItemStack.with(Items.sand, 15, Items.graphite, 3),
+                    ItemStack.with(Items.silicon, 15),
+                    6f
+                )
             )
+            regionSuffix = "-dark"
             health = 1100
-            size = 5
+            size = 4
         }
         //endregion
         //region units
