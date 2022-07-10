@@ -33,6 +33,9 @@ mindustry {
     server {
         mindustry be latest
     }
+    deploy {
+        baseName = project.name
+    }
 }
 mindustryAssets {
     root at "$projectDir/assets"
