@@ -11,12 +11,13 @@ import arc.util.Eachable
 import arc.util.Strings.autoFixed
 import avkott.extension.add
 import avkott.ui.addT
+import avkott.world.draw.DrawHeatInputPadload
+import avkott.world.draw.DrawPayload
 import mindustry.content.Fx
 import mindustry.entities.units.BuildPlan
 import mindustry.gen.Building
 import mindustry.gen.Icon
 import mindustry.gen.Tex
-import mindustry.graphics.Layer
 import mindustry.graphics.Pal
 import mindustry.type.Item
 import mindustry.type.ItemStack
@@ -30,6 +31,8 @@ import mindustry.world.blocks.payloads.BuildPayload
 import mindustry.world.blocks.payloads.Payload
 import mindustry.world.blocks.payloads.PayloadBlock
 import mindustry.world.draw.DrawDefault
+import mindustry.world.draw.DrawMulti
+import mindustry.world.draw.DrawRegion
 import mindustry.world.meta.Stat
 
 @Suppress("PLATFORM_CLASS_MAPPED_TO_KOTLIN")
@@ -37,8 +40,11 @@ class PayloadCrafter(name: String) : PayloadBlock(name) {
     //The recipe must contain a unique [Recipe.payload]
     var recipes = Seq<Recipe>(4)
     var craftEffect = Fx.smeltsmoke
-    //would be use soon
-    var mainDrawer = DrawDefault()
+    var drawer = DrawMulti(
+        DrawDefault(), DrawPayload(),
+        DrawRegion("-top"),
+        DrawHeatInputPadload("-heat")
+    )
     var overheatScale = 1f
     var maxEfficiency = 4f
     var warmupSpeed = 0.019f
@@ -288,21 +294,7 @@ class PayloadCrafter(name: String) : PayloadBlock(name) {
         }
 
         override fun draw() {
-            Draw.rect(region, x, y)
-            //draw input
-            var fallback = true
-            for (i in 0..3) {
-                if (blends(i) && i != rotation) {
-                    Draw.rect(inRegion, x, y, (i * 90 - 180).toFloat())
-                    fallback = false
-                }
-            }
-            if (fallback) Draw.rect(inRegion, x, y, (rotation * 90).toFloat())
-
-            Draw.z(Layer.blockOver)
-            Draw.rect(outRegion, x, y, rotdeg())
-            drawPayload()
-            Draw.rect(topRegion, x, y)
+            drawer.draw(this)
         }
 
         override fun sideHeat() = sideHeat

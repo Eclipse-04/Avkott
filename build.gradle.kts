@@ -36,6 +36,9 @@ mindustry {
     deploy {
         baseName = project.name
     }
+    run {
+        setDataDefault()
+    }
 }
 mindustryAssets {
     root at "$projectDir/assets"
