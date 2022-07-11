@@ -160,23 +160,23 @@ class PayloadCrafter(name: String) : PayloadBlock(name) {
                             image().growX().pad(5f).padLeft(0f).padRight(0f).height(4f).color(Color.darkGray)
                             row()
                             addT {
-                                add("${bundle["stat.input"]}:").width(70f).left()
+                                add("${bundle["stat.input"]}:").left().padRight(20f)
                                 addT {
                                     recipe.requirements.forEach {
                                         add(ItemDisplay(it.item, it.amount, recipe.time, false).left())
                                     }
-                                }.left().growX().row()
-                                add("${bundle["stat.output"]}:").width(70f).left()
+                                }.left().row()
+                                add("${bundle["stat.output"]}:").left().padRight(20f)
                                 addT {
                                     recipe.output.forEach {
                                         add(ItemDisplay(it.item, it.amount, recipe.time, false).left())
                                     }
-                                }.left().growX().row()
-                                add("${bundle["bar.heat"]}:").width(70f).left()
+                                }.left().row()
+                                add("${bundle["bar.heat"]}:").width(70f).left().padRight(20f)
                                 if(recipe.heat > 0f) addT {
                                     image(Core.atlas.find("status-burning")).padRight(5f)
-                                    add("${autoFixed(recipe.heat, 1)} ${bundle["unit.heatunits"]}").left()
-                                }
+                                    add("${autoFixed(recipe.heat, 1)} ${bundle["unit.heatunits"]}")
+                                }.left()
                             }.left().row()
                             add("${bundle["stat.productiontime"]}: ${autoFixed(recipe.time / 60f, 1)} ${bundle["unit.seconds"]}").color(Color.lightGray).left().row()
                             add("${bundle["stat.maxefficiency"]}: ${autoFixed(maxEfficiency * 100, 1)}%").color(Color.lightGray).left()
