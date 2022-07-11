@@ -19,7 +19,7 @@ class DrawPayload : DrawBlock() {
                 fallback = false
             }
         }
-        if (fallback) Draw.rect(bu.inRegion, b.x, b.y, (b.rotation * 90).toFloat())
+        if (fallback) Draw.rect(bu.inRegion, b.x, b.y, b.rotation * 90f)
         Draw.z(Layer.blockOver)
         Draw.rect(bu.outRegion, b.x, b.y, b.rotdeg())
         b.drawPayload()

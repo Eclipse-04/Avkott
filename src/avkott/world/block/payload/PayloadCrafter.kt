@@ -69,6 +69,7 @@ class PayloadCrafter(name: String) : PayloadBlock(name) {
         liquidCapacity = 100f
         update = true
         outputsPayload = true
+        rotateDraw = false
         size = 3
         rotate = true
         solid = true
@@ -105,13 +106,12 @@ class PayloadCrafter(name: String) : PayloadBlock(name) {
         if (hasHeat) {
             addBar<PayloadCrafterBuild>("heat") {
                 Bar(
-                    { bundle.format("bar.heatpercent", it.heat.toInt(), (it.efficiencyScale() * 100).toInt()) },
+                    { if(it.useHeat()) bundle.format("bar.heatpercent", it.heat.toInt(), (it.efficiencyScale() * 100).toInt()) else bundle["none"] },
                     { Pal.lightOrange },
                     {
                         if (it.enabledRecipe) {
                             it.currentRecipe.run {
-                                if (heat > 0f) it.heat / heat
-                                else 0f
+                                if (heat > 0f) it.heat / heat else 0f
                             }
                         } else 0f
                     })
@@ -126,6 +126,10 @@ class PayloadCrafter(name: String) : PayloadBlock(name) {
         Draw.rect(topRegion, plan.drawx(), plan.drawy())
     }
 
+    override fun load() {
+        super.load()
+        drawer.load(this)
+    }
     override fun setStats() {
         super.setStats()
 
@@ -217,7 +221,9 @@ class PayloadCrafter(name: String) : PayloadBlock(name) {
             }
             warmup = Mathf.approachDelta(warmup, warmupTarget(), warmupSpeed)
         }
-
+        fun useHeat(): Boolean {
+            return currentRecipe.heat > 0f
+        }
         fun canCraft(): Boolean {
             val payBuild = payload?.build
             return if (payBuild != null)
@@ -268,13 +274,14 @@ class PayloadCrafter(name: String) : PayloadBlock(name) {
         }
 
         override fun config() = currentRecipeIndex
-        fun efficiencyScale() =
-            if (enabledRecipe) {
-                val recipe = currentRecipe
-                val req = recipe.heat
-                val over = (heat - recipe.heat).coerceAtLeast(0f)
-                (heat / req + (over / req) * overheatScale).coerceAtLeast(maxEfficiency)
-            } else 1f
+        fun efficiencyScale(): Float {
+            if(currentRecipe.heat > 0f) {
+                val over = (heat - currentRecipe.heat).coerceAtLeast(0f)
+                return (Mathf.clamp(heat / currentRecipe.heat) + over / currentRecipe.heat * overheatScale).coerceAtMost(
+                    maxEfficiency
+                )
+            } else return 1f
+        }
 
         override fun warmup(): Float {
             return warmup
@@ -295,6 +302,7 @@ class PayloadCrafter(name: String) : PayloadBlock(name) {
 
         override fun draw() {
             drawer.draw(this)
+            updatePayload()
         }
 
         override fun sideHeat() = sideHeat
