@@ -1,5 +1,6 @@
 package avkott.world.block.payload
 
+import arc.Core
 import arc.Core.bundle
 import arc.graphics.Color
 import arc.graphics.g2d.Draw
@@ -151,7 +152,7 @@ class PayloadCrafter(name: String) : PayloadBlock(name) {
                             addT {
                                 add(recipe.payload.localizedName).left()
                                 if (recipe.power > 0f) addT {
-                                    image(Icon.power).padRight(10f).color(Pal.power)
+                                    image(Icon.power).padRight(5f).color(Pal.power)
                                     add("${autoFixed(recipe.power * 60f, 1)} ${bundle["unit.powerunits"]}")
                                 }.right().padLeft(30f).color(Pal.power)
                             }.row()
@@ -159,23 +160,26 @@ class PayloadCrafter(name: String) : PayloadBlock(name) {
                             image().growX().pad(5f).padLeft(0f).padRight(0f).height(4f).color(Color.darkGray)
                             row()
                             addT {
-                                add("${bundle["stat.input"]}:").width(100f)
+                                add("${bundle["stat.input"]}:").width(70f).left()
                                 addT {
                                     recipe.requirements.forEach {
-                                        add(ItemDisplay(it.item, it.amount, recipe.time, false))
+                                        add(ItemDisplay(it.item, it.amount, recipe.time, false).left())
                                     }
                                 }.left().growX().row()
-                                add("${bundle["stat.output"]}:").width(100f)
+                                add("${bundle["stat.output"]}:").width(70f).left()
                                 addT {
                                     recipe.output.forEach {
-                                        add(ItemDisplay(it.item, it.amount, recipe.time, false))
+                                        add(ItemDisplay(it.item, it.amount, recipe.time, false).left())
                                     }
-                                }.left().growX()
+                                }.left().growX().row()
+                                add("${bundle["bar.heat"]}:").width(70f).left()
+                                if(recipe.heat > 0f) addT {
+                                    image(Core.atlas.find("status-burning")).padRight(5f)
+                                    add("${autoFixed(recipe.heat, 1)} ${bundle["unit.heatunits"]}").left()
+                                }
                             }.left().row()
-                            val timeReq = "${bundle["stat.productiontime"]}: ${
-                                autoFixed(recipe.time / 60f, 1)
-                            } ${bundle["unit.seconds"]}"
-                            add(timeReq).color(Color.lightGray).left()
+                            add("${bundle["stat.productiontime"]}: ${autoFixed(recipe.time / 60f, 1)} ${bundle["unit.seconds"]}").color(Color.lightGray).left().row()
+                            add("${bundle["stat.maxefficiency"]}: ${autoFixed(maxEfficiency * 100, 1)}%").color(Color.lightGray).left()
                         }.pad(20f)
                     }
                 }
@@ -202,19 +206,17 @@ class PayloadCrafter(name: String) : PayloadBlock(name) {
                 val recipe = currentRecipe
                 heat = if (recipe.heat > 0f) calculateHeat(sideHeat)
                 else 0f
-                if (efficiency > 0.01f) {
-                    if (canExport()) {
-                        moveOutPayload()
-                    } else if (moveInPayload()) {
-                        if (canCraft()) {
-                            if (progress < 1f) progress += getProgressIncrease(recipe.time) else {
-                                progress %= 1f
-                                craftEffect.at(x, y)
-                                payload.build.items.remove(recipe.requirements)
-                                payload.build.items.add(recipe.output) // done
-                            }
-                        } else exporting = true
-                    }
+                if (canExport()) {
+                    moveOutPayload()
+                } else if (moveInPayload()) {
+                    if (canCraft()) {
+                        if (progress < 1f) progress += getProgressIncrease(recipe.time) else {
+                            progress %= 1f
+                            craftEffect.at(x, y)
+                            payload.build.items.remove(recipe.requirements)
+                            payload.build.items.add(recipe.output) // done
+                        }
+                    } else exporting = true
                 }
             } else {
                 heat = 0f
@@ -266,7 +268,6 @@ class PayloadCrafter(name: String) : PayloadBlock(name) {
                 this.payload == null && payload.block() == currentRecipe.payload
             } else false
         }
-        //????
         override fun acceptItem(source: Building, item: Item): Boolean {
             return if (currentRecipeIndex in 0 until recipes.size) {
                 item in currentRecipe.item2Stack && items[item] < this.getMaximumAccepted(item)

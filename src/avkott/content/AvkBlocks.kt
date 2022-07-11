@@ -239,7 +239,7 @@ object AvkBlocks {
                 PayloadCrafter.Recipe(
                     Blocks.reinforcedContainer, 45f,
                     ItemStack.with(Items.sand, 15, Items.graphite, 3),
-                    ItemStack.with(Items.silicon, 15), 6f, 6f
+                    ItemStack.with(Items.silicon, 15), 11f, 8f
                 )
             )
             regionSuffix = "-dark"

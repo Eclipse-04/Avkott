@@ -26,15 +26,13 @@ class DrawHeatInputPadload(var suffix: String) : DrawBlock() {
 
         if(b is HeatConsumer){
             val side = b.sideHeat()
-            var fallback = true
             for(i in 0..3){
                 if(side[i] > 0){
                     Draw.blend(Blending.additive)
                     Draw.color(color, side[i] / b.heatRequirement() * (color.a * (1f - heatPulse + Mathf.absin(heatPulseScl, heatPulse))))
                     if (b.blends(i) || i == b.rotation) {
-                        fallback = false
                         Draw.rect(heatIn, b.x, b.y, i * 90f)
-                    } else if(!fallback) Draw.rect(heat, b.x, b.y, i * 90f) else Draw.rect(heat, b.x, b.y, i * 90f + 180f)
+                    } else Draw.rect(heat, b.x, b.y, i * 90f)
 
                     Draw.blend()
                     Draw.color()
