@@ -3,7 +3,6 @@ package avkott.world.block.payload
 import arc.Core
 import arc.Core.bundle
 import arc.graphics.Color
-import arc.graphics.g2d.Draw
 import arc.graphics.g2d.TextureRegion
 import arc.math.Mathf
 import arc.scene.ui.layout.Table
@@ -31,7 +30,6 @@ import mindustry.world.blocks.heat.HeatConsumer
 import mindustry.world.blocks.payloads.BuildPayload
 import mindustry.world.blocks.payloads.Payload
 import mindustry.world.blocks.payloads.PayloadBlock
-import mindustry.world.draw.DrawDefault
 import mindustry.world.draw.DrawMulti
 import mindustry.world.draw.DrawRegion
 import mindustry.world.meta.Stat
@@ -42,7 +40,7 @@ class PayloadCrafter(name: String) : PayloadBlock(name) {
     var recipes = Seq<Recipe>(4)
     var craftEffect = Fx.smeltsmoke
     var drawer = DrawMulti(
-        DrawDefault(), DrawPayload(),
+        DrawRegion(""), DrawPayload(),
         DrawRegion("-top"),
         DrawHeatInputPadload("-heat")
     )
@@ -71,7 +69,6 @@ class PayloadCrafter(name: String) : PayloadBlock(name) {
         update = true
         outputsPayload = true
         rotateDraw = false
-        size = 3
         rotate = true
         solid = true
         configurable = true
@@ -119,17 +116,12 @@ class PayloadCrafter(name: String) : PayloadBlock(name) {
             }
         }
     }
-
-    override fun drawPlanRegion(plan: BuildPlan, list: Eachable<BuildPlan>) {
-        Draw.rect(region, plan.drawx(), plan.drawy())
-        Draw.rect(inRegion, plan.drawx(), plan.drawy(), (plan.rotation * 90).toFloat())
-        Draw.rect(outRegion, plan.drawx(), plan.drawy(), (plan.rotation * 90).toFloat())
-        Draw.rect(topRegion, plan.drawx(), plan.drawy())
-    }
-
     override fun load() {
         super.load()
         drawer.load(this)
+    }
+    override fun drawPlanRegion(plan: BuildPlan, list: Eachable<BuildPlan>) {
+        drawer.drawPlan(this, plan, list)
     }
     override fun setStats() {
         super.setStats()
@@ -303,7 +295,6 @@ class PayloadCrafter(name: String) : PayloadBlock(name) {
 
         override fun draw() {
             drawer.draw(this)
-            updatePayload()
         }
 
         override fun sideHeat() = sideHeat
