@@ -69,7 +69,6 @@ class PayloadCrafter(name: String) : PayloadBlock(name) {
         update = true
         outputsPayload = true
         rotateDraw = false
-        size = 3
         rotate = true
         solid = true
         configurable = true

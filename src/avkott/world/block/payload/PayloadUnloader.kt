@@ -6,13 +6,10 @@ import arc.math.Mathf
 import arc.util.Eachable
 import avkott.world.block.payload.PayloadSilo.PayloadSiloBuild
 import avkott.world.draw.DrawPayload
-import mindustry.Vars.tilesize
 import mindustry.content.Fx
 import mindustry.entities.units.BuildPlan
 import mindustry.gen.Building
-import mindustry.graphics.Drawf
 import mindustry.graphics.Layer
-import mindustry.graphics.Pal
 import mindustry.world.blocks.payloads.Payload
 import mindustry.world.blocks.payloads.PayloadBlock
 import mindustry.world.draw.DrawMulti
@@ -43,11 +40,6 @@ class PayloadUnloader(name: String) : PayloadBlock(name) {
 
     override fun drawPlanRegion(plan: BuildPlan, list: Eachable<BuildPlan>) {
         drawer.drawPlan(this, plan, list)
-    }
-
-    override fun drawPlace(x: Int, y: Int, rotation: Int, valid: Boolean) {
-        super.drawPlace(x, y, rotation, valid)
-        Drawf.select(x.toFloat(), y.toFloat(), tilesize.toFloat(), if(valid) Pal.accent else Pal.remove)
     }
 
     inner class PayloadUnloaderBuild : PayloadBlockBuild<Payload>() {
