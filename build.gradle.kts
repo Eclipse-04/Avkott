@@ -39,6 +39,7 @@ mindustry {
     run {
         setDataDefault()
     }
+    io.github.liplum.mindustry.MindustryPlugin.Anuken
 }
 mindustryAssets {
     root at "$projectDir/assets"

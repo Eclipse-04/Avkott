@@ -5,6 +5,8 @@ import arc.math.Interp
 import avkott.content.AvkLiquids.liquidNitrogen
 import avkott.world.block.defend.Bomb
 import avkott.world.block.payload.PayloadCrafter
+import avkott.world.block.payload.PayloadSilo
+import avkott.world.block.payload.PayloadUnloader
 import mindustry.content.*
 import mindustry.entities.bullet.BasicBulletType
 import mindustry.entities.bullet.ExplosionBulletType
@@ -41,6 +43,8 @@ object AvkBlocks {
     lateinit var heatComburstor: Block
     lateinit var payloadMixer: Block
     lateinit var mechCrafter: Block
+    lateinit var payloadSilo: Block
+    lateinit var payloadUnloader: Block
     lateinit var vesselFabricator: Block
     lateinit var beryliumBomb: Block
     fun load() {
@@ -239,7 +243,7 @@ object AvkBlocks {
                 PayloadCrafter.Recipe(
                     Blocks.reinforcedContainer, 45f,
                     ItemStack.with(Items.sand, 15, Items.graphite, 3),
-                    ItemStack.with(Items.silicon, 15), 11f, 8f
+                    ItemStack.with(Items.silicon, 15), 10.5f, 8f
                 )
             )
             regionSuffix = "-dark"
@@ -280,6 +284,21 @@ object AvkBlocks {
             )
             areaSize = 8
             consumeLiquid(Liquids.hydrogen, 8 / 60f)
+        }
+        payloadSilo = PayloadSilo("payload-silo").apply {
+            requirements(
+                Category.units,
+                ItemStack.with(Items.thorium, 120, Items.tungsten, 220, Items.phaseFabric, 40, Items.carbide, 80)
+            )
+            size = 5
+        }
+        payloadUnloader = PayloadUnloader("payload-unloader").apply {
+            requirements(
+                Category.units,
+                ItemStack.with(Items.tungsten, 80, Items.oxide, 40, Items.carbide, 80)
+            )
+            size = 3
+            regionSuffix = "-dark"
         }
         //endregion
         //region effect
