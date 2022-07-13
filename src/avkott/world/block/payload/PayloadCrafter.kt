@@ -14,6 +14,7 @@ import avkott.ui.addT
 import avkott.world.draw.DrawHeatInputPadload
 import avkott.world.draw.DrawPayload
 import mindustry.content.Fx
+import mindustry.entities.Effect
 import mindustry.entities.units.BuildPlan
 import mindustry.gen.Building
 import mindustry.gen.Icon
@@ -38,7 +39,7 @@ import mindustry.world.meta.Stat
 class PayloadCrafter(name: String) : PayloadBlock(name) {
     //The recipe must contain a unique [Recipe.payload]
     var recipes = Seq<Recipe>(4)
-    var craftEffect = Fx.smeltsmoke
+    var craftEffect: Effect = Fx.smeltsmoke
     var drawer = DrawMulti(
         DrawRegion(""), DrawPayload(),
         DrawRegion("-top"),
@@ -58,7 +59,7 @@ class PayloadCrafter(name: String) : PayloadBlock(name) {
         val heat: Float = 0f,
         val description: String = "",
         val outputItems: Array<ItemStack> = emptyArray(),
-        val consumePayload: Boolean = false
+        val consumePayload: Boolean = false,
     ) {
         val item2Stack = output.associateBy { it.item }
     }
@@ -91,7 +92,7 @@ class PayloadCrafter(name: String) : PayloadBlock(name) {
 
     override fun init() {
         consumePowerDynamic { b: PayloadCrafterBuild ->
-            if (b.currentRecipeIndex != -1) recipes[b.currentRecipeIndex].power else 0f
+            if (b.enabledRecipe) b.currentRecipe.power else 0f
         }
         hasHeat = recipes.any { it.heat > 0f }
         // Initialize others before vanilla one
@@ -107,7 +108,13 @@ class PayloadCrafter(name: String) : PayloadBlock(name) {
         if (hasHeat) {
             addBar<PayloadCrafterBuild>("heat") {
                 Bar(
-                    { if(it.useHeat()) bundle.format("bar.heatpercent", it.heat.toInt(), (it.efficiencyScale() * 100).toInt()) else bundle["none"] },
+                    {
+                        if (it.useHeat) bundle.format(
+                            "bar.heatpercent",
+                            it.heat.toInt(),
+                            (it.efficiencyScale() * 100).toInt()
+                        ) else bundle["none"]
+                    },
                     { Pal.lightOrange },
                     {
                         if (it.enabledRecipe) {
@@ -119,22 +126,25 @@ class PayloadCrafter(name: String) : PayloadBlock(name) {
             }
         }
     }
+
     override fun load() {
         super.load()
         drawer.load(this)
     }
+
     override fun drawPlanRegion(plan: BuildPlan, list: Eachable<BuildPlan>) {
         drawer.drawPlan(this, plan, list)
     }
+
     override fun setStats() {
         super.setStats()
 
-        stats.add(Stat.output) { table ->
-            table.row()
+        stats.add(Stat.output) { stat ->
+            stat.row()
             //terrible code
             //edited this line
             for (recipe in recipes) {
-                table.addT {
+                stat.addT {
                     background(Tex.whiteui)
                     setColor(Pal.darkestGray)
                     if (!recipe.payload.isPlaceable) {
@@ -152,12 +162,12 @@ class PayloadCrafter(name: String) : PayloadBlock(name) {
                                 }.right().padLeft(30f).color(Pal.power)
                             }.row()
                             image().growX().pad(5f).padLeft(0f).padRight(0f).height(4f).color(Color.darkGray).row()
-                            if(recipe.description.isNotEmpty()) {
+                            if (recipe.description.isNotEmpty()) {
                                 add(recipe.description).left().pad(0f, 10f, 4f, 10f).row()
                                 image().growX().pad(5f).padLeft(0f).padRight(0f).height(4f).color(Color.darkGray).row()
                             }
                             addT {
-                                if(recipe.requirements.isNotEmpty()) {
+                                if (recipe.requirements.isNotEmpty()) {
                                     add("${bundle["stat.input"]}:").left().padRight(20f)
                                     addT {
                                         recipe.requirements.forEach {
@@ -165,7 +175,7 @@ class PayloadCrafter(name: String) : PayloadBlock(name) {
                                         }
                                     }.left().row()
                                 }
-                                if(recipe.output.isNotEmpty() || recipe.outputItems.isNotEmpty()){
+                                if (recipe.output.isNotEmpty() || recipe.outputItems.isNotEmpty()) {
                                     add("${bundle["stat.output"]}:").left().padRight(20f)
                                     addT {
                                         recipe.output.forEach {
@@ -176,7 +186,7 @@ class PayloadCrafter(name: String) : PayloadBlock(name) {
                                         }
                                     }.left().row()
                                 }
-                                if(recipe.heat > 0f) {
+                                if (recipe.heat > 0f) {
                                     add("${bundle["bar.heat"]}:").width(70f).left().padRight(20f)
                                     addT {
                                         image(Core.atlas.find("status-burning")).padRight(5f)
@@ -184,8 +194,17 @@ class PayloadCrafter(name: String) : PayloadBlock(name) {
                                     }.left()
                                 }
                             }.left().row()
-                            add("${bundle["stat.productiontime"]}: ${autoFixed(recipe.time / 60f, 1)} ${bundle["unit.seconds"]}").color(Color.lightGray).left().row()
-                            if(recipe.heat > 0f) add("${bundle["stat.maxefficiency"]}: ${autoFixed(maxEfficiency * 100, 1)}%").color(Color.lightGray).left()
+                            add("${bundle["stat.productiontime"]}: ${autoFixed(recipe.time / 60f, 1)} ${bundle["unit.seconds"]}").color(
+                                Color.lightGray
+                            ).left().row()
+                            if (recipe.heat > 0f) add(
+                                "${bundle["stat.maxefficiency"]}: ${
+                                    autoFixed(
+                                        maxEfficiency * 100,
+                                        1
+                                    )
+                                }%"
+                            ).color(Color.lightGray).left()
                         }.pad(20f)
                     }
                 }.growX().padBottom(20f).row()
@@ -228,6 +247,7 @@ class PayloadCrafter(name: String) : PayloadBlock(name) {
             warmup = Mathf.approachDelta(warmup, warmupTarget(), warmupSpeed)
             dumpOutputs()
         }
+
         fun dumpOutputs() {
             if (currentRecipe.output.isNotEmpty()) {
                 for (output in currentRecipe.output) {
@@ -259,14 +279,15 @@ class PayloadCrafter(name: String) : PayloadBlock(name) {
                 craftEffect.at(x, y)
             }
         }
-        fun useHeat(): Boolean {
-            return currentRecipe.heat > 0f
-        }
+
+        val useHeat: Boolean
+            get() = currentRecipe.heat > 0f
+
         fun canCraft(): Boolean {
             val payBuild = payload?.build
             return if (payBuild != null)
                 enabledRecipe && payload.block() == currentRecipe.payload &&
-                (currentRecipe.requirements.isEmpty() || payBuild.items.has(currentRecipe.requirements))
+                        (currentRecipe.requirements.isEmpty() || payBuild.items.has(currentRecipe.requirements))
             else false
         }
 
@@ -305,6 +326,7 @@ class PayloadCrafter(name: String) : PayloadBlock(name) {
                 this.payload == null && payload.block() == currentRecipe.payload
             } else false
         }
+
         override fun acceptItem(source: Building, item: Item): Boolean {
             return if (currentRecipeIndex in 0 until recipes.size) {
                 item in currentRecipe.item2Stack && items[item] < this.getMaximumAccepted(item)
@@ -313,7 +335,7 @@ class PayloadCrafter(name: String) : PayloadBlock(name) {
 
         override fun config() = currentRecipeIndex
         fun efficiencyScale(): Float {
-            if(currentRecipe.heat > 0f) {
+            if (currentRecipe.heat > 0f) {
                 val over = (heat - currentRecipe.heat).coerceAtLeast(0f)
                 return (Mathf.clamp(heat / currentRecipe.heat) + over / currentRecipe.heat * overheatScale).coerceAtMost(
                     maxEfficiency
