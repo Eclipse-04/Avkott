@@ -145,7 +145,13 @@ class PayloadCrafter(name: String) : PayloadBlock(name) {
                         image(recipe.payload.uiIcon).size(40f).top().left().padLeft(20f).padTop(20f)
                         addT {
                             addT {
-                                add(recipe.payload.localizedName).left()
+                                addT {
+                                    add(recipe.payload.localizedName).left()
+                                    if(recipe.consumePayload) {
+                                        row()
+                                        add(bundle["stat.consumePayload"]).color(Color.lightGray).left()
+                                    }
+                                }.left()
                                 if (recipe.power > 0f) addT {
                                     image(Icon.power).padRight(5f).color(Pal.power)
                                     add("${autoFixed(recipe.power * 60f, 1)} ${bundle["unit.powerunits"]}")
