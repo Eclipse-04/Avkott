@@ -5,12 +5,14 @@ import arc.Core.bundle
 import arc.graphics.Color
 import arc.graphics.g2d.TextureRegion
 import arc.math.Mathf
+import arc.scene.ui.TextButton
 import arc.scene.ui.layout.Table
 import arc.struct.Seq
 import arc.util.Eachable
 import arc.util.Strings.autoFixed
 import avkott.extension.add
 import avkott.ui.addT
+import avkott.ui.collapser
 import avkott.world.draw.DrawHeatInputPadload
 import avkott.world.draw.DrawPayload
 import mindustry.content.Fx
@@ -57,12 +59,14 @@ class PayloadCrafter(name: String) : PayloadBlock(name) {
         val output: Array<ItemStack>,
         val power: Float = 0f,
         val heat: Float = 0f,
-        val description: String = "",
         val outputItems: Array<ItemStack> = emptyArray(),
         val consumePayload: Boolean = false,
     ) {
         val item2Stack = output.associateBy { it.item }
     }
+
+    val Recipe.description: String
+        get() = bundle["$name.recipe-${recipes.indexOf(this)}.desc", ""]
 
     init {
         hasItems = true
@@ -155,15 +159,34 @@ class PayloadCrafter(name: String) : PayloadBlock(name) {
                         image(recipe.payload.uiIcon).size(40f).top().left().padLeft(20f).padTop(20f)
                         addT {
                             addT {
-                                add(recipe.payload.localizedName).left()
+                                addT {
+                                    add(recipe.payload.localizedName).left()
+                                    if (recipe.consumePayload) {
+                                        row()
+                                        add(bundle["stat.consumePayload"]).color(Color.lightGray).left()
+                                    }
+                                }.left()
                                 if (recipe.power > 0f) addT {
                                     image(Icon.power).padRight(5f).color(Pal.power)
                                     add("${autoFixed(recipe.power * 60f, 1)} ${bundle["unit.powerunits"]}")
                                 }.right().padLeft(30f).color(Pal.power)
                             }.row()
-                            image().growX().pad(5f).padLeft(0f).padRight(0f).height(4f).color(Color.darkGray).row()
-                            if (recipe.description.isNotEmpty()) {
-                                add(recipe.description).left().pad(0f, 10f, 4f, 10f).row()
+                            val recipeDesc = recipe.description
+                            if (recipeDesc.isNotBlank()) {
+                                val info = TextButton("i")
+                                addT {
+                                    add(info)
+                                    image().growX().pad(5f).padLeft(5f).padRight(0f).height(4f).color(Color.darkGray)
+                                }.growX().row()
+                                var collapsed by collapser(false) {
+                                    add(recipeDesc).left().pad(0f, 10f, 4f, 10f)
+                                }
+                                row()
+                                info.changed {
+                                    collapsed = !collapsed
+                                }
+                                image().growX().pad(5f).padLeft(0f).padRight(0f).height(4f).color(Color.darkGray).row()
+                            } else {
                                 image().growX().pad(5f).padLeft(0f).padRight(0f).height(4f).color(Color.darkGray).row()
                             }
                             addT {

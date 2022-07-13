@@ -248,7 +248,6 @@ object AvkBlocks {
                 PayloadCrafter.Recipe(
                     Blocks.berylliumWallLarge, 240f,
                     emptyArray(), emptyArray(), 10f, 0f,
-                    "potato.",
                     ItemStack.with(Items.copper, 50), true
                 )
             )
