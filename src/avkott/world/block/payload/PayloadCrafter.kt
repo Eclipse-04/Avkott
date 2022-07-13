@@ -5,7 +5,7 @@ import arc.Core.bundle
 import arc.graphics.Color
 import arc.graphics.g2d.TextureRegion
 import arc.math.Mathf
-import arc.scene.ui.TextButton
+import arc.scene.ui.ImageButton
 import arc.scene.ui.layout.Table
 import arc.struct.Seq
 import arc.util.Eachable
@@ -173,7 +173,7 @@ class PayloadCrafter(name: String) : PayloadBlock(name) {
                             }.row()
                             val recipeDesc = recipe.description
                             if (recipeDesc.isNotBlank()) {
-                                val info = TextButton("i")
+                                val info = ImageButton(Icon.downOpen.region)
                                 addT {
                                     add(info)
                                     image().growX().pad(5f).padLeft(5f).padRight(0f).height(4f).color(Color.darkGray)
@@ -182,6 +182,10 @@ class PayloadCrafter(name: String) : PayloadBlock(name) {
                                     add(recipeDesc).left().pad(0f, 10f, 4f, 10f)
                                 }
                                 row()
+                                info.update {
+                                    val tr = if (collapsed) Icon.downOpen else Icon.upOpen
+                                    info.style.imageUp = tr
+                                }
                                 info.changed {
                                     collapsed = !collapsed
                                 }
