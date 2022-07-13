@@ -173,13 +173,14 @@ class PayloadCrafter(name: String) : PayloadBlock(name) {
                             }.row()
                             val recipeDesc = recipe.description
                             if (recipeDesc.isNotBlank()) {
-                                val info = ImageButton(Icon.downOpen.region)
+                                val info = ImageButton(Icon.downOpen.region, Styles.clearNonei)
                                 addT {
                                     add(info)
                                     image().growX().pad(5f).padLeft(5f).padRight(0f).height(4f).color(Color.darkGray)
                                 }.growX().row()
                                 var collapsed by collapser(false) {
-                                    add(recipeDesc).left().pad(0f, 10f, 4f, 10f)
+                                    add(recipeDesc).fillX().left().pad(0f, 10f, 4f, 10f).wrap().row()
+                                    image().growX().pad(5f).padLeft(0f).padRight(0f).height(4f).color(Color.darkGray)
                                 }
                                 row()
                                 info.update {
@@ -189,7 +190,6 @@ class PayloadCrafter(name: String) : PayloadBlock(name) {
                                 info.changed {
                                     collapsed = !collapsed
                                 }
-                                image().growX().pad(5f).padLeft(0f).padRight(0f).height(4f).color(Color.darkGray).row()
                             } else {
                                 image().growX().pad(5f).padLeft(0f).padRight(0f).height(4f).color(Color.darkGray).row()
                             }
