@@ -3,6 +3,7 @@ package avkott.world.block.payload
 import arc.graphics.g2d.Draw
 import arc.graphics.g2d.TextureRegion
 import arc.math.Mathf
+import arc.math.geom.Vec2
 import arc.util.Eachable
 import avkott.world.block.payload.PayloadSilo.PayloadSiloBuild
 import avkott.world.draw.DrawPayload
@@ -12,6 +13,7 @@ import mindustry.gen.Building
 import mindustry.graphics.Layer
 import mindustry.world.blocks.payloads.Payload
 import mindustry.world.blocks.payloads.PayloadBlock
+import mindustry.world.blocks.payloads.UnitPayload
 import mindustry.world.draw.DrawMulti
 import mindustry.world.draw.DrawRegion
 
@@ -27,6 +29,8 @@ class PayloadUnloader(name: String) : PayloadBlock(name) {
     init {
         rotate = true
         rotateDraw = false
+        solid = true
+        commandable = true
     }
 
     override fun icons(): Array<TextureRegion> {
@@ -46,6 +50,7 @@ class PayloadUnloader(name: String) : PayloadBlock(name) {
         var silo: PayloadSiloBuild? = null
         var loadProgress = 0f
         var scl = 0f // visual
+        var commandPos: Vec2? = null
 
         override fun updateTile() {
             super.updateTile()
@@ -61,20 +66,33 @@ class PayloadUnloader(name: String) : PayloadBlock(name) {
             }
             scl = Mathf.lerpDelta(scl, 1f, 0.08f)
         }
+        fun updateSilo() {
+            silo = back() as? PayloadSiloBuild
+        }
 
         fun unloadPayload(silo: PayloadSiloBuild) {
             payload = silo.stored.removeFirst()
             payVector.set(0f, 0f)
             payRotation = rotation.toFloat()
+
+            if(payload is UnitPayload && commandPos != null) (payload as UnitPayload).unit.command().commandPosition(commandPos)
         }
 
         override fun onProximityUpdate() {
             super.onProximityUpdate()
-            silo = back() as? PayloadSiloBuild ?: return
+            updateSilo()
+        }
+
+        override fun getCommandPosition(): Vec2? {
+            return commandPos
         }
 
         override fun acceptPayload(source: Building, payload: Payload): Boolean {
             return false
+        }
+
+        override fun onCommand(target: Vec2) {
+            commandPos = target
         }
 
         override fun draw() {

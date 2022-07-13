@@ -5,15 +5,19 @@ import arc.Core.bundle
 import arc.graphics.Color
 import arc.graphics.g2d.TextureRegion
 import arc.math.Mathf
+import arc.scene.ui.ImageButton
 import arc.scene.ui.layout.Table
 import arc.struct.Seq
 import arc.util.Eachable
 import arc.util.Strings.autoFixed
 import avkott.extension.add
 import avkott.ui.addT
+import avkott.ui.collapser
 import avkott.world.draw.DrawHeatInputPadload
 import avkott.world.draw.DrawPayload
+import mindustry.Vars
 import mindustry.content.Fx
+import mindustry.entities.Effect
 import mindustry.entities.units.BuildPlan
 import mindustry.gen.Building
 import mindustry.gen.Icon
@@ -38,7 +42,7 @@ import mindustry.world.meta.Stat
 class PayloadCrafter(name: String) : PayloadBlock(name) {
     //The recipe must contain a unique [Recipe.payload]
     var recipes = Seq<Recipe>(4)
-    var craftEffect = Fx.smeltsmoke
+    var craftEffect: Effect = Fx.smeltsmoke
     var drawer = DrawMulti(
         DrawRegion(""), DrawPayload(),
         DrawRegion("-top"),
@@ -56,12 +60,14 @@ class PayloadCrafter(name: String) : PayloadBlock(name) {
         val output: Array<ItemStack>,
         val power: Float = 0f,
         val heat: Float = 0f,
-        val description: String = "",
         val outputItems: Array<ItemStack> = emptyArray(),
-        val consumePayload: Boolean = false
+        val consumePayload: Boolean = false,
     ) {
         val item2Stack = output.associateBy { it.item }
     }
+
+    val Recipe.description: String
+        get() = bundle["$name.recipe-${recipes.indexOf(this)}.desc", ""]
 
     init {
         hasItems = true
@@ -85,13 +91,16 @@ class PayloadCrafter(name: String) : PayloadBlock(name) {
             if (tile.currentRecipeIndex != new) {
                 tile.currentRecipeIndex = if (new < 0) -1 else new.coerceIn(0, recipes.size - 1)
                 tile.progress = 0f
+                if(!Vars.headless){
+                    tile.rebuildHoveredInfoIfNeed()
+                }
             }
         }
     }
 
     override fun init() {
         consumePowerDynamic { b: PayloadCrafterBuild ->
-            if (b.currentRecipeIndex != -1) recipes[b.currentRecipeIndex].power else 0f
+            if (b.enabledRecipe) b.currentRecipe.power else 0f
         }
         hasHeat = recipes.any { it.heat > 0f }
         // Initialize others before vanilla one
@@ -101,96 +110,31 @@ class PayloadCrafter(name: String) : PayloadBlock(name) {
     override fun icons(): Array<TextureRegion> {
         return arrayOf(region, inRegion, outRegion, topRegion)
     }
+    var hoveredInfo: Table? = null
+    fun PayloadCrafterBuild.genHeatBar() = Bar(
+        {
+            bundle.format(
+                "bar.heatpercent",
+                heat.toInt(),
+                (efficiencyScale() * 100).toInt()
+            )
+        },
+        { Pal.lightOrange },
+        {
+            if (enabledRecipe) {
+                currentRecipe.let {
+                    if (it.heat > 0f) heat / it.heat else 0f
+                }
+            } else 0f
+        })
 
-    override fun setBars() {
-        super.setBars()
-        if (hasHeat) {
-            addBar<PayloadCrafterBuild>("heat") {
-                Bar(
-                    { if(it.useHeat()) bundle.format("bar.heatpercent", it.heat.toInt(), (it.efficiencyScale() * 100).toInt()) else bundle["none"] },
-                    { Pal.lightOrange },
-                    {
-                        if (it.enabledRecipe) {
-                            it.currentRecipe.run {
-                                if (heat > 0f) it.heat / heat else 0f
-                            }
-                        } else 0f
-                    })
-            }
-        }
-    }
     override fun load() {
         super.load()
         drawer.load(this)
     }
+
     override fun drawPlanRegion(plan: BuildPlan, list: Eachable<BuildPlan>) {
         drawer.drawPlan(this, plan, list)
-    }
-    override fun setStats() {
-        super.setStats()
-
-        stats.add(Stat.output) { table ->
-            table.row()
-            //terrible code
-            //edited this line
-            for (recipe in recipes) {
-                table.addT {
-                    background(Tex.whiteui)
-                    setColor(Pal.darkestGray)
-                    if (!recipe.payload.isPlaceable) {
-                        image(Icon.cancel).color(Pal.remove).size(40f)
-                        return@addT
-                    }
-                    if (recipe.payload.unlockedNow()) {
-                        image(recipe.payload.uiIcon).size(40f).top().left().padLeft(20f).padTop(20f)
-                        addT {
-                            addT {
-                                add(recipe.payload.localizedName).left()
-                                if (recipe.power > 0f) addT {
-                                    image(Icon.power).padRight(5f).color(Pal.power)
-                                    add("${autoFixed(recipe.power * 60f, 1)} ${bundle["unit.powerunits"]}")
-                                }.right().padLeft(30f).color(Pal.power)
-                            }.row()
-                            image().growX().pad(5f).padLeft(0f).padRight(0f).height(4f).color(Color.darkGray).row()
-                            if(recipe.description.isNotEmpty()) {
-                                add(recipe.description).left().pad(0f, 10f, 4f, 10f).row()
-                                image().growX().pad(5f).padLeft(0f).padRight(0f).height(4f).color(Color.darkGray).row()
-                            }
-                            addT {
-                                if(recipe.requirements.isNotEmpty()) {
-                                    add("${bundle["stat.input"]}:").left().padRight(20f)
-                                    addT {
-                                        recipe.requirements.forEach {
-                                            add(ItemDisplay(it.item, it.amount, recipe.time, false).left())
-                                        }
-                                    }.left().row()
-                                }
-                                if(recipe.output.isNotEmpty() || recipe.outputItems.isNotEmpty()){
-                                    add("${bundle["stat.output"]}:").left().padRight(20f)
-                                    addT {
-                                        recipe.output.forEach {
-                                            add(ItemDisplay(it.item, it.amount, recipe.time, false).left())
-                                        }
-                                        recipe.outputItems.forEach {
-                                            add(ItemDisplay(it.item, it.amount, recipe.time, false).left())
-                                        }
-                                    }.left().row()
-                                }
-                                if(recipe.heat > 0f) {
-                                    add("${bundle["bar.heat"]}:").width(70f).left().padRight(20f)
-                                    addT {
-                                        image(Core.atlas.find("status-burning")).padRight(5f)
-                                        add("${autoFixed(recipe.heat, 1)} ${bundle["unit.heatunits"]}")
-                                    }.left()
-                                }
-                            }.left().row()
-                            add("${bundle["stat.productiontime"]}: ${autoFixed(recipe.time / 60f, 1)} ${bundle["unit.seconds"]}").color(Color.lightGray).left().row()
-                            if(recipe.heat > 0f) add("${bundle["stat.maxefficiency"]}: ${autoFixed(maxEfficiency * 100, 1)}%").color(Color.lightGray).left()
-                        }.pad(20f)
-                    }
-                }.growX().padBottom(20f).row()
-            }
-        }
     }
 
     inner class PayloadCrafterBuild :
@@ -228,6 +172,7 @@ class PayloadCrafter(name: String) : PayloadBlock(name) {
             warmup = Mathf.approachDelta(warmup, warmupTarget(), warmupSpeed)
             dumpOutputs()
         }
+
         fun dumpOutputs() {
             if (currentRecipe.output.isNotEmpty()) {
                 for (output in currentRecipe.output) {
@@ -259,14 +204,15 @@ class PayloadCrafter(name: String) : PayloadBlock(name) {
                 craftEffect.at(x, y)
             }
         }
-        fun useHeat(): Boolean {
-            return currentRecipe.heat > 0f
-        }
+
+        val useHeat: Boolean
+            get() = enabledRecipe && currentRecipe.heat > 0f
+
         fun canCraft(): Boolean {
             val payBuild = payload?.build
             return if (payBuild != null)
                 enabledRecipe && payload.block() == currentRecipe.payload &&
-                (currentRecipe.requirements.isEmpty() || payBuild.items.has(currentRecipe.requirements))
+                        (currentRecipe.requirements.isEmpty() || payBuild.items.has(currentRecipe.requirements))
             else false
         }
 
@@ -278,7 +224,21 @@ class PayloadCrafter(name: String) : PayloadBlock(name) {
             super.handlePayload(source, payload)
             exporting = false
         }
-
+        override fun display(table: Table) {
+            super.display(table)
+            hoveredInfo = table
+        }
+        fun rebuildHoveredInfoIfNeed() {
+            try {
+                val info = hoveredInfo
+                if (info != null) {
+                    info.clear()
+                    display(info)
+                }
+            } catch (ignored: Exception) {
+                // Maybe null pointer or cast exception
+            }
+        }
         override fun buildConfiguration(table: Table) {
             val payloads: Seq<Block> = recipes.map { it.payload }.filter {
                 it.unlockedNow()
@@ -305,6 +265,7 @@ class PayloadCrafter(name: String) : PayloadBlock(name) {
                 this.payload == null && payload.block() == currentRecipe.payload
             } else false
         }
+
         override fun acceptItem(source: Building, item: Item): Boolean {
             return if (currentRecipeIndex in 0 until recipes.size) {
                 item in currentRecipe.item2Stack && items[item] < this.getMaximumAccepted(item)
@@ -312,14 +273,11 @@ class PayloadCrafter(name: String) : PayloadBlock(name) {
         }
 
         override fun config() = currentRecipeIndex
-        fun efficiencyScale(): Float {
-            if(currentRecipe.heat > 0f) {
-                val over = (heat - currentRecipe.heat).coerceAtLeast(0f)
-                return (Mathf.clamp(heat / currentRecipe.heat) + over / currentRecipe.heat * overheatScale).coerceAtMost(
-                    maxEfficiency
-                )
-            } else return 1f
-        }
+        fun efficiencyScale(): Float = if (currentRecipe.heat > 0f) {
+            val over = (heat - currentRecipe.heat).coerceAtLeast(0f)
+            ((heat / currentRecipe.heat).coerceIn(0f, 1f) + over / currentRecipe.heat * overheatScale)
+                .coerceAtMost(maxEfficiency)
+        } else 1f
 
         override fun warmup(): Float {
             return warmup
@@ -344,5 +302,117 @@ class PayloadCrafter(name: String) : PayloadBlock(name) {
 
         override fun sideHeat() = sideHeat
         override fun heatRequirement() = currentRecipe.heat
+        override fun displayBars(table: Table) {
+            for (barProv in listBars()) {
+                val bar = barProv.get(this) ?: continue
+                table.add(bar).growX()
+                table.row()
+            }
+            if (useHeat) {
+                val bar = genHeatBar()
+                table.add(bar).growX()
+                table.row()
+            }
+        }
     }
+
+    override fun setStats() {
+        super.setStats()
+
+        stats.add(Stat.output) { stat ->
+            stat.row()
+            //terrible code
+            //edited this line
+            for (recipe in recipes) {
+                stat.addT {
+                    background(Tex.whiteui)
+                    setColor(Pal.darkestGray)
+                    if (!recipe.payload.isPlaceable) {
+                        image(Icon.cancel).color(Pal.remove).size(40f)
+                        return@addT
+                    }
+                    if (recipe.payload.unlockedNow()) {
+                        image(recipe.payload.uiIcon).size(40f).top().left().padLeft(20f).padTop(20f)
+                        addT {
+                            addT {
+                                addT {
+                                    add(recipe.payload.localizedName).left()
+                                    if (recipe.consumePayload) {
+                                        row()
+                                        add(bundle["stat.consumePayload"]).color(Color.lightGray).left()
+                                    }
+                                }.left()
+                                if (recipe.power > 0f) addT {
+                                    image(Icon.power).padRight(5f).color(Pal.power)
+                                    add("${autoFixed(recipe.power * 60f, 1)} ${bundle["unit.powerunits"]}")
+                                }.right().padLeft(30f).color(Pal.power)
+                            }.row()
+                            val recipeDesc = recipe.description
+                            if (recipeDesc.isNotBlank()) {
+                                val info = ImageButton(Icon.downOpen.region, Styles.clearNonei)
+                                addT {
+                                    add(info)
+                                    image().growX().pad(5f).padLeft(5f).padRight(0f).height(4f).color(Color.darkGray)
+                                }.growX().row()
+                                var collapsed by collapser(false) {
+                                    add(recipeDesc).fillX().left().pad(0f, 10f, 4f, 10f).wrap().row()
+                                    image().growX().pad(5f).padLeft(0f).padRight(0f).height(4f).color(Color.darkGray)
+                                }
+                                row()
+                                info.update {
+                                    val tr = if (collapsed) Icon.downOpen else Icon.upOpen
+                                    info.style.imageUp = tr
+                                }
+                                info.changed {
+                                    collapsed = !collapsed
+                                }
+                            } else {
+                                image().growX().pad(5f).padLeft(0f).padRight(0f).height(4f).color(Color.darkGray).row()
+                            }
+                            addT {
+                                if (recipe.requirements.isNotEmpty()) {
+                                    add("${bundle["stat.input"]}:").left().padRight(20f)
+                                    addT {
+                                        recipe.requirements.forEach {
+                                            add(ItemDisplay(it.item, it.amount, recipe.time, false).left())
+                                        }
+                                    }.left().row()
+                                }
+                                if (recipe.output.isNotEmpty() || recipe.outputItems.isNotEmpty()) {
+                                    add("${bundle["stat.output"]}:").left().padRight(20f)
+                                    addT {
+                                        recipe.output.forEach {
+                                            add(ItemDisplay(it.item, it.amount, recipe.time, false).left())
+                                        }
+                                        recipe.outputItems.forEach {
+                                            add(ItemDisplay(it.item, it.amount, recipe.time, false).left())
+                                        }
+                                    }.left().row()
+                                }
+                                if (recipe.heat > 0f) {
+                                    add("${bundle["bar.heat"]}:").width(70f).left().padRight(20f)
+                                    addT {
+                                        image(Core.atlas.find("status-burning")).padRight(5f)
+                                        add("${autoFixed(recipe.heat, 1)} ${bundle["unit.heatunits"]}")
+                                    }.left()
+                                }
+                            }.left().row()
+                            add("${bundle["stat.productiontime"]}: ${autoFixed(recipe.time / 60f, 1)} ${bundle["unit.seconds"]}").color(
+                                Color.lightGray
+                            ).left().row()
+                            if (recipe.heat > 0f) add(
+                                "${bundle["stat.maxefficiency"]}: ${
+                                    autoFixed(
+                                        maxEfficiency * 100,
+                                        1
+                                    )
+                                }%"
+                            ).color(Color.lightGray).left()
+                        }.pad(20f)
+                    }
+                }.growX().padBottom(20f).row()
+            }
+        }
+    }
+
 }

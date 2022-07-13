@@ -248,7 +248,6 @@ object AvkBlocks {
                 PayloadCrafter.Recipe(
                     Blocks.berylliumWallLarge, 240f,
                     emptyArray(), emptyArray(), 10f, 0f,
-                    "potato.",
                     ItemStack.with(Items.copper, 50), true
                 )
             )
@@ -297,6 +296,7 @@ object AvkBlocks {
                 ItemStack.with(Items.thorium, 120, Items.tungsten, 220, Items.phaseFabric, 40, Items.carbide, 80)
             )
             size = 5
+            payloadSpeed = 1.4f
         }
         payloadUnloader = PayloadUnloader("payload-unloader").apply {
             requirements(

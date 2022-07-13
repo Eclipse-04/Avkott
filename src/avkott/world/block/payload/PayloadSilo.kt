@@ -21,6 +21,10 @@ import mindustry.world.draw.DrawRegion
 class PayloadSilo(name: String) : PayloadBlock(name) {
     var storage = 8 * tilePayload
 
+    init {
+        solid = true
+    }
+
     var drawer = DrawMulti(
         DrawRegion(""),
         DrawPayload().apply { drawOut = false; defaultIn = false; drawPlan = false; drawPayload = false },

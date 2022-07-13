@@ -4,7 +4,7 @@ import io.github.liplum.mindustry.mindustryRepo
 
 plugins {
     kotlin("jvm") version "1.7.10"
-    id("io.github.liplum.mgpp") version "1.0.13"
+    id("io.github.liplum.mgpp") version "1.1.1"
 }
 sourceSets {
     main {
@@ -37,9 +37,8 @@ mindustry {
         baseName = project.name
     }
     run {
-        setDataDefault()
+        useDefaultDataDir
     }
-    io.github.liplum.mindustry.MindustryPlugin.Anuken
 }
 mindustryAssets {
     root at "$projectDir/assets"
