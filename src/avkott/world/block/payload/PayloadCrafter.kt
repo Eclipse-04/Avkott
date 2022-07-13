@@ -15,6 +15,7 @@ import avkott.ui.addT
 import avkott.ui.collapser
 import avkott.world.draw.DrawHeatInputPadload
 import avkott.world.draw.DrawPayload
+import mindustry.Vars
 import mindustry.content.Fx
 import mindustry.entities.Effect
 import mindustry.entities.units.BuildPlan
@@ -90,6 +91,9 @@ class PayloadCrafter(name: String) : PayloadBlock(name) {
             if (tile.currentRecipeIndex != new) {
                 tile.currentRecipeIndex = if (new < 0) -1 else new.coerceIn(0, recipes.size - 1)
                 tile.progress = 0f
+                if(!Vars.headless){
+                    tile.rebuildHoveredInfoIfNeed()
+                }
             }
         }
     }
@@ -106,30 +110,23 @@ class PayloadCrafter(name: String) : PayloadBlock(name) {
     override fun icons(): Array<TextureRegion> {
         return arrayOf(region, inRegion, outRegion, topRegion)
     }
-
-    override fun setBars() {
-        super.setBars()
-        if (hasHeat) {
-            addBar<PayloadCrafterBuild>("heat") {
-                Bar(
-                    {
-                        if (it.useHeat) bundle.format(
-                            "bar.heatpercent",
-                            it.heat.toInt(),
-                            (it.efficiencyScale() * 100).toInt()
-                        ) else bundle["none"]
-                    },
-                    { Pal.lightOrange },
-                    {
-                        if (it.enabledRecipe) {
-                            it.currentRecipe.run {
-                                if (heat > 0f) it.heat / heat else 0f
-                            }
-                        } else 0f
-                    })
-            }
-        }
-    }
+    var hoveredInfo: Table? = null
+    fun PayloadCrafterBuild.genHeatBar() = Bar(
+        {
+            bundle.format(
+                "bar.heatpercent",
+                heat.toInt(),
+                (efficiencyScale() * 100).toInt()
+            )
+        },
+        { Pal.lightOrange },
+        {
+            if (enabledRecipe) {
+                currentRecipe.let {
+                    if (it.heat > 0f) heat / it.heat else 0f
+                }
+            } else 0f
+        })
 
     override fun load() {
         super.load()
@@ -138,6 +135,185 @@ class PayloadCrafter(name: String) : PayloadBlock(name) {
 
     override fun drawPlanRegion(plan: BuildPlan, list: Eachable<BuildPlan>) {
         drawer.drawPlan(this, plan, list)
+    }
+
+    inner class PayloadCrafterBuild :
+        PayloadBlockBuild<BuildPayload>(), HeatConsumer {
+        var currentRecipeIndex = -1
+        var progress = 0f
+        var exporting = false
+        var sideHeat = FloatArray(4)
+        var heat = 0f
+        var warmup = 0f
+        val currentRecipe: Recipe
+            get() = recipes[currentRecipeIndex.coerceIn(0, recipes.size - 1)]
+        val enabledRecipe: Boolean
+            get() = currentRecipeIndex >= 0
+
+        override fun updateTile() {
+            super.updateTile()
+            if (enabledRecipe) {
+                heat = if (currentRecipe.heat > 0f) calculateHeat(sideHeat)
+                else 0f
+                if (canExport()) {
+                    moveOutPayload()
+                } else if (moveInPayload()) {
+                    if (canCraft()) {
+                        if (progress < 1f) progress += getProgressIncrease(currentRecipe.time) else {
+                            progress %= 1f
+                            craft()
+                            // done
+                        }
+                    } else exporting = true
+                }
+            } else {
+                heat = 0f
+            }
+            warmup = Mathf.approachDelta(warmup, warmupTarget(), warmupSpeed)
+            dumpOutputs()
+        }
+
+        fun dumpOutputs() {
+            if (currentRecipe.output.isNotEmpty()) {
+                for (output in currentRecipe.output) {
+                    dump(output.item)
+                }
+            }
+            if (currentRecipe.outputItems.isNotEmpty()) {
+                for (output in currentRecipe.outputItems) {
+                    dump(output.item)
+                }
+            }
+        }
+
+        fun craft() {
+            if (currentRecipe.requirements.isNotEmpty()) payload.build.items.remove(currentRecipe.requirements)
+            if (currentRecipe.output.isNotEmpty()) payload.build.items.add(currentRecipe.output)
+
+            if (currentRecipe.outputItems.isNotEmpty()) {
+                for (output in currentRecipe.outputItems) {
+                    for (i in 0 until output.amount) {
+                        offload(output.item)
+                    }
+                }
+            }
+
+            if (currentRecipe.consumePayload) payload = null
+
+            if (wasVisible) {
+                craftEffect.at(x, y)
+            }
+        }
+
+        val useHeat: Boolean
+            get() = enabledRecipe && currentRecipe.heat > 0f
+
+        fun canCraft(): Boolean {
+            val payBuild = payload?.build
+            return if (payBuild != null)
+                enabledRecipe && payload.block() == currentRecipe.payload &&
+                        (currentRecipe.requirements.isEmpty() || payBuild.items.has(currentRecipe.requirements))
+            else false
+        }
+
+        override fun shouldConsume(): Boolean {
+            return super.shouldConsume() && canCraft()
+        }
+
+        override fun handlePayload(source: Building, payload: Payload) {
+            super.handlePayload(source, payload)
+            exporting = false
+        }
+        override fun display(table: Table) {
+            super.display(table)
+            hoveredInfo = table
+        }
+        fun rebuildHoveredInfoIfNeed() {
+            try {
+                val info = hoveredInfo
+                if (info != null) {
+                    info.clear()
+                    display(info)
+                }
+            } catch (ignored: Exception) {
+                // Maybe null pointer or cast exception
+            }
+        }
+        override fun buildConfiguration(table: Table) {
+            val payloads: Seq<Block> = recipes.map { it.payload }.filter {
+                it.unlockedNow()
+            }
+
+            if (payloads.any()) {
+                ItemSelection.buildTable(this@PayloadCrafter, table, payloads,
+                    { if (currentRecipeIndex < 0) null else currentRecipe.payload }
+                ) {
+                    configure(recipes.indexOf { recipe -> recipe.payload == it })
+                }
+            } else {
+                table.table(Styles.black3) { t: Table -> t.add("@none").color(Color.lightGray) }
+            }
+        }
+
+        fun canExport(): Boolean {
+            return payload != null && (exporting
+                    || payload.block() != currentRecipe.payload)
+        }
+
+        override fun acceptPayload(source: Building, payload: Payload): Boolean {
+            return if (currentRecipeIndex >= 0 && payload is BuildPayload) {
+                this.payload == null && payload.block() == currentRecipe.payload
+            } else false
+        }
+
+        override fun acceptItem(source: Building, item: Item): Boolean {
+            return if (currentRecipeIndex in 0 until recipes.size) {
+                item in currentRecipe.item2Stack && items[item] < this.getMaximumAccepted(item)
+            } else false
+        }
+
+        override fun config() = currentRecipeIndex
+        fun efficiencyScale(): Float = if (currentRecipe.heat > 0f) {
+            val over = (heat - currentRecipe.heat).coerceAtLeast(0f)
+            ((heat / currentRecipe.heat).coerceIn(0f, 1f) + over / currentRecipe.heat * overheatScale)
+                .coerceAtMost(maxEfficiency)
+        } else 1f
+
+        override fun warmup(): Float {
+            return warmup
+        }
+
+        fun warmupTarget() = if (enabledRecipe) {
+            val recipe = currentRecipe
+            val req = recipe.heat
+            if (req > 0f) (heat / req).coerceIn(0f, 1f)
+            else 1f
+        } else 0f
+
+        override fun updateEfficiencyMultiplier() {
+            val scale = efficiencyScale()
+            efficiency *= scale
+            potentialEfficiency *= scale
+        }
+
+        override fun draw() {
+            drawer.draw(this)
+        }
+
+        override fun sideHeat() = sideHeat
+        override fun heatRequirement() = currentRecipe.heat
+        override fun displayBars(table: Table) {
+            for (barProv in listBars()) {
+                val bar = barProv.get(this) ?: continue
+                table.add(bar).growX()
+                table.row()
+            }
+            if (useHeat) {
+                val bar = genHeatBar()
+                table.add(bar).growX()
+                table.row()
+            }
+        }
     }
 
     override fun setStats() {
@@ -239,159 +415,4 @@ class PayloadCrafter(name: String) : PayloadBlock(name) {
         }
     }
 
-    inner class PayloadCrafterBuild :
-        PayloadBlockBuild<BuildPayload>(), HeatConsumer {
-        var currentRecipeIndex = -1
-        var progress = 0f
-        var exporting = false
-        var sideHeat = FloatArray(4)
-        var heat = 0f
-        var warmup = 0f
-        val currentRecipe: Recipe
-            get() = recipes[currentRecipeIndex.coerceIn(0, recipes.size - 1)]
-        val enabledRecipe: Boolean
-            get() = currentRecipeIndex >= 0
-
-        override fun updateTile() {
-            super.updateTile()
-            if (enabledRecipe) {
-                heat = if (currentRecipe.heat > 0f) calculateHeat(sideHeat)
-                else 0f
-                if (canExport()) {
-                    moveOutPayload()
-                } else if (moveInPayload()) {
-                    if (canCraft()) {
-                        if (progress < 1f) progress += getProgressIncrease(currentRecipe.time) else {
-                            progress %= 1f
-                            craft()
-                            // done
-                        }
-                    } else exporting = true
-                }
-            } else {
-                heat = 0f
-            }
-            warmup = Mathf.approachDelta(warmup, warmupTarget(), warmupSpeed)
-            dumpOutputs()
-        }
-
-        fun dumpOutputs() {
-            if (currentRecipe.output.isNotEmpty()) {
-                for (output in currentRecipe.output) {
-                    dump(output.item)
-                }
-            }
-            if (currentRecipe.outputItems.isNotEmpty()) {
-                for (output in currentRecipe.outputItems) {
-                    dump(output.item)
-                }
-            }
-        }
-
-        fun craft() {
-            if (currentRecipe.requirements.isNotEmpty()) payload.build.items.remove(currentRecipe.requirements)
-            if (currentRecipe.output.isNotEmpty()) payload.build.items.add(currentRecipe.output)
-
-            if (currentRecipe.outputItems.isNotEmpty()) {
-                for (output in currentRecipe.outputItems) {
-                    for (i in 0 until output.amount) {
-                        offload(output.item)
-                    }
-                }
-            }
-
-            if (currentRecipe.consumePayload) payload = null
-
-            if (wasVisible) {
-                craftEffect.at(x, y)
-            }
-        }
-
-        val useHeat: Boolean
-            get() = currentRecipe.heat > 0f
-
-        fun canCraft(): Boolean {
-            val payBuild = payload?.build
-            return if (payBuild != null)
-                enabledRecipe && payload.block() == currentRecipe.payload &&
-                        (currentRecipe.requirements.isEmpty() || payBuild.items.has(currentRecipe.requirements))
-            else false
-        }
-
-        override fun shouldConsume(): Boolean {
-            return super.shouldConsume() && canCraft()
-        }
-
-        override fun handlePayload(source: Building, payload: Payload) {
-            super.handlePayload(source, payload)
-            exporting = false
-        }
-
-        override fun buildConfiguration(table: Table) {
-            val payloads: Seq<Block> = recipes.map { it.payload }.filter {
-                it.unlockedNow()
-            }
-
-            if (payloads.any()) {
-                ItemSelection.buildTable(this@PayloadCrafter, table, payloads,
-                    { if (currentRecipeIndex < 0) null else currentRecipe.payload }
-                ) {
-                    configure(recipes.indexOf { recipe -> recipe.payload == it })
-                }
-            } else {
-                table.table(Styles.black3) { t: Table -> t.add("@none").color(Color.lightGray) }
-            }
-        }
-
-        fun canExport(): Boolean {
-            return payload != null && (exporting
-                    || payload.block() != currentRecipe.payload)
-        }
-
-        override fun acceptPayload(source: Building, payload: Payload): Boolean {
-            return if (currentRecipeIndex >= 0 && payload is BuildPayload) {
-                this.payload == null && payload.block() == currentRecipe.payload
-            } else false
-        }
-
-        override fun acceptItem(source: Building, item: Item): Boolean {
-            return if (currentRecipeIndex in 0 until recipes.size) {
-                item in currentRecipe.item2Stack && items[item] < this.getMaximumAccepted(item)
-            } else false
-        }
-
-        override fun config() = currentRecipeIndex
-        fun efficiencyScale(): Float {
-            if (currentRecipe.heat > 0f) {
-                val over = (heat - currentRecipe.heat).coerceAtLeast(0f)
-                return (Mathf.clamp(heat / currentRecipe.heat) + over / currentRecipe.heat * overheatScale).coerceAtMost(
-                    maxEfficiency
-                )
-            } else return 1f
-        }
-
-        override fun warmup(): Float {
-            return warmup
-        }
-
-        fun warmupTarget() = if (enabledRecipe) {
-            val recipe = currentRecipe
-            val req = recipe.heat
-            if (req > 0f) (heat / req).coerceIn(0f, 1f)
-            else 1f
-        } else 0f
-
-        override fun updateEfficiencyMultiplier() {
-            val scale = efficiencyScale()
-            efficiency *= scale
-            potentialEfficiency *= scale
-        }
-
-        override fun draw() {
-            drawer.draw(this)
-        }
-
-        override fun sideHeat() = sideHeat
-        override fun heatRequirement() = currentRecipe.heat
-    }
 }
