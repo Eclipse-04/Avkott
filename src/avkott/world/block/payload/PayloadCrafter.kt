@@ -15,6 +15,7 @@ import avkott.ui.addT
 import avkott.ui.collapser
 import avkott.world.draw.DrawHeatInputPadload
 import avkott.world.draw.DrawPayload
+import avkott.world.draw.DrawRecipe
 import mindustry.Vars
 import mindustry.content.Fx
 import mindustry.entities.Effect
@@ -22,6 +23,7 @@ import mindustry.entities.units.BuildPlan
 import mindustry.gen.Building
 import mindustry.gen.Icon
 import mindustry.gen.Tex
+import mindustry.graphics.Layer
 import mindustry.graphics.Pal
 import mindustry.type.Item
 import mindustry.type.ItemStack
@@ -34,6 +36,7 @@ import mindustry.world.blocks.heat.HeatConsumer
 import mindustry.world.blocks.payloads.BuildPayload
 import mindustry.world.blocks.payloads.Payload
 import mindustry.world.blocks.payloads.PayloadBlock
+import mindustry.world.draw.DrawBlock
 import mindustry.world.draw.DrawMulti
 import mindustry.world.draw.DrawRegion
 import mindustry.world.meta.Stat
@@ -45,12 +48,13 @@ class PayloadCrafter(name: String) : PayloadBlock(name) {
     var craftEffect: Effect = Fx.smeltsmoke
     var drawer = DrawMulti(
         DrawRegion(""), DrawPayload(),
-        DrawRegion("-top"),
+        DrawRecipe(),
+        DrawRegion("-top").apply { layer = Layer.blockOver + 0.2f },
         DrawHeatInputPadload("-heat")
     )
     var overheatScale = 1f
     var maxEfficiency = 4f
-    var warmupSpeed = 0.019f
+    var warmupSpeed = 0.02f
     var hasHeat = false
 
     class Recipe(
@@ -60,10 +64,19 @@ class PayloadCrafter(name: String) : PayloadBlock(name) {
         val output: Array<ItemStack>,
         val power: Float = 0f,
         val heat: Float = 0f,
+        val inputItems: Array<ItemStack> = emptyArray(),
         val outputItems: Array<ItemStack> = emptyArray(),
-        val consumePayload: Boolean = false,
+        val drawer: DrawBlock? = null,
+        var consumePayload: Boolean = false,
+        val convertInto: Block? = null
     ) {
-        val item2Stack = output.associateBy { it.item }
+        val itemOut2Stack = output.associateBy { it.item }
+        val itemIn2Stack = inputItems.associateBy { it.item }
+        val payloadItem = requirements.isNotEmpty() or output.isNotEmpty()
+        val payloadExItem = inputItems.isNotEmpty() or outputItems.isNotEmpty() or (heat > 0)
+        init {
+            if(convertInto != null) consumePayload = true
+        }
     }
 
     val Recipe.description: String
@@ -141,6 +154,7 @@ class PayloadCrafter(name: String) : PayloadBlock(name) {
         PayloadBlockBuild<BuildPayload>(), HeatConsumer {
         var currentRecipeIndex = -1
         var progress = 0f
+        var totalProgress = 0f
         var exporting = false
         var sideHeat = FloatArray(4)
         var heat = 0f
@@ -159,12 +173,15 @@ class PayloadCrafter(name: String) : PayloadBlock(name) {
                     moveOutPayload()
                 } else if (moveInPayload()) {
                     if (canCraft()) {
-                        if (progress < 1f) progress += getProgressIncrease(currentRecipe.time) else {
+                        if (progress < 1f) {
+                            progress += getProgressIncrease(currentRecipe.time)
+                            totalProgress += edelta()
+                        } else {
                             progress %= 1f
                             craft()
                             // done
                         }
-                    } else exporting = true
+                    } else if (currentRecipe.inputItems.isEmpty()) exporting = true
                 }
             } else {
                 heat = 0f
@@ -186,6 +203,9 @@ class PayloadCrafter(name: String) : PayloadBlock(name) {
             }
         }
 
+        override fun progress(): Float = progress
+        override fun totalProgress(): Float = totalProgress
+
         fun craft() {
             if (currentRecipe.requirements.isNotEmpty()) payload.build.items.remove(currentRecipe.requirements)
             if (currentRecipe.output.isNotEmpty()) payload.build.items.add(currentRecipe.output)
@@ -198,11 +218,12 @@ class PayloadCrafter(name: String) : PayloadBlock(name) {
                 }
             }
 
-            if (currentRecipe.consumePayload) payload = null
-
-            if (wasVisible) {
-                craftEffect.at(x, y)
+            if (currentRecipe.consumePayload) {
+                payload = null
+                if (currentRecipe.convertInto != null) payload = BuildPayload(currentRecipe.convertInto, team)
             }
+
+            if (wasVisible) craftEffect.at(x, y)
         }
 
         val useHeat: Boolean
@@ -212,7 +233,8 @@ class PayloadCrafter(name: String) : PayloadBlock(name) {
             val payBuild = payload?.build
             return if (payBuild != null)
                 enabledRecipe && payload.block() == currentRecipe.payload &&
-                        (currentRecipe.requirements.isEmpty() || payBuild.items.has(currentRecipe.requirements))
+                (currentRecipe.requirements.isEmpty() || payBuild.items.has(currentRecipe.requirements)) &&
+                (currentRecipe.inputItems.isEmpty() || items.has(currentRecipe.inputItems))
             else false
         }
 
@@ -268,7 +290,7 @@ class PayloadCrafter(name: String) : PayloadBlock(name) {
 
         override fun acceptItem(source: Building, item: Item): Boolean {
             return if (currentRecipeIndex in 0 until recipes.size) {
-                item in currentRecipe.item2Stack && items[item] < this.getMaximumAccepted(item)
+                item in currentRecipe.itemIn2Stack && items[item] < this.getMaximumAccepted(item)
             } else false
         }
 
@@ -279,11 +301,9 @@ class PayloadCrafter(name: String) : PayloadBlock(name) {
                 .coerceAtMost(maxEfficiency)
         } else 1f
 
-        override fun warmup(): Float {
-            return warmup
-        }
+        override fun warmup(): Float = warmup
 
-        fun warmupTarget() = if (enabledRecipe) {
+        fun warmupTarget() = if (enabledRecipe && canCraft()) {
             val recipe = currentRecipe
             val req = recipe.heat
             if (req > 0f) (heat / req).coerceIn(0f, 1f)
@@ -332,7 +352,13 @@ class PayloadCrafter(name: String) : PayloadBlock(name) {
                         return@addT
                     }
                     if (recipe.payload.unlockedNow()) {
-                        image(recipe.payload.uiIcon).size(40f).top().left().padLeft(20f).padTop(20f)
+                        addT{
+                            image(recipe.payload.uiIcon).size(40f).row()
+                            if(recipe.convertInto != null) {
+                                image(Icon.down).size(40f).color(Pal.darkishGray).padTop(10f).padBottom(10f).row()
+                                image(recipe.convertInto.uiIcon).size(40f)
+                            }
+                        }.top().left().padLeft(20f).padTop(20f).padBottom(20f)
                         addT {
                             addT {
                                 addT {
@@ -352,11 +378,11 @@ class PayloadCrafter(name: String) : PayloadBlock(name) {
                                 val info = ImageButton(Icon.downOpen.region, Styles.clearNonei)
                                 addT {
                                     add(info)
-                                    image().growX().pad(5f).padLeft(5f).padRight(0f).height(4f).color(Color.darkGray)
+                                    image().growX().pad(7f).padLeft(5f).padRight(0f).height(4f).color(Color.darkGray)
                                 }.growX().row()
                                 var collapsed by collapser(false) {
                                     add(recipeDesc).fillX().left().pad(0f, 10f, 4f, 10f).wrap().row()
-                                    image().growX().pad(5f).padLeft(0f).padRight(0f).height(4f).color(Color.darkGray)
+                                    image().growX().pad(7f).padLeft(0f).padRight(0f).height(4f).color(Color.darkGray)
                                 }
                                 row()
                                 info.update {
@@ -367,7 +393,7 @@ class PayloadCrafter(name: String) : PayloadBlock(name) {
                                     collapsed = !collapsed
                                 }
                             } else {
-                                image().growX().pad(5f).padLeft(0f).padRight(0f).height(4f).color(Color.darkGray).row()
+                                image().growX().pad(7f).padLeft(0f).padRight(0f).height(4f).color(Color.darkGray).row()
                             }
                             addT {
                                 if (recipe.requirements.isNotEmpty()) {
