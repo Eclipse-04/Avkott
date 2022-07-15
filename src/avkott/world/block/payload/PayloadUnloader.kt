@@ -5,20 +5,28 @@ import arc.graphics.g2d.TextureRegion
 import arc.math.Mathf
 import arc.math.geom.Geometry
 import arc.math.geom.Vec2
+import arc.scene.ui.layout.Table
 import arc.util.Eachable
 import avkott.world.block.payload.PayloadSilo.PayloadSiloBuild
 import avkott.world.draw.DrawPayload
 import mindustry.Vars
+import mindustry.Vars.content
 import mindustry.Vars.tilesize
 import mindustry.content.Fx
+import mindustry.ctype.UnlockableContent
 import mindustry.entities.units.BuildPlan
 import mindustry.gen.Building
 import mindustry.graphics.Drawf
 import mindustry.graphics.Layer
 import mindustry.graphics.Pal
+import mindustry.type.UnitType
+import mindustry.world.Block
+import mindustry.world.blocks.ItemSelection
+import mindustry.world.blocks.payloads.BuildPayload
 import mindustry.world.blocks.payloads.Payload
 import mindustry.world.blocks.payloads.PayloadBlock
 import mindustry.world.blocks.payloads.UnitPayload
+import mindustry.world.blocks.storage.CoreBlock
 import mindustry.world.draw.DrawMulti
 import mindustry.world.draw.DrawRegion
 
@@ -36,12 +44,26 @@ class PayloadUnloader(name: String) : PayloadBlock(name) {
         rotateDraw = false
         solidifes = true
         commandable = true
+        configurable = true
+        saveConfig = true
+        config(Block::class.java) { tile: PayloadUnloaderBuild, block: Block ->
+            tile.configBlock = block
+            tile.configUnit = null
+        }
+        config(UnitType::class.java) { tile: PayloadUnloaderBuild, unit: UnitType ->
+            tile.configBlock = null
+            tile.configUnit = unit
+        }
+        configClear { tile: PayloadUnloaderBuild ->
+            tile.configBlock = null
+            tile.configUnit = null
+        }
     }
     override fun drawOverlay(x: Float, y: Float, rotation: Int) {
         val r = Geometry.d4[rotation]
-        val xOff = x - r.x * size * tilesize + tilesize / 2 * r.x
-        val yOff = y - r.y * size * tilesize + tilesize / 2 * r.y
-        val tile = Vars.world.tile(xOff.toInt() / 8, yOff.toInt() / 8)?.build
+        val xOff = x - (size / 2 + 1) * r.x * tilesize
+        val yOff = y - (size / 2 + 1) * r.y * tilesize
+        val tile = Vars.world.tile(xOff.toInt() / tilesize, yOff.toInt() / tilesize)?.build
         if(tile != null && tile is PayloadSiloBuild) Drawf.select(tile.x, tile.y, tile.block.size.toFloat() * tilesize / 2, Pal.accent)
             else Drawf.select(xOff, yOff, tilesize.toFloat(), Pal.accent)
     }
@@ -53,7 +75,12 @@ class PayloadUnloader(name: String) : PayloadBlock(name) {
         super.load()
         drawer.load(this)
     }
-
+    fun canProduce(b: Block): Boolean {
+        return b.isVisible && b.size < size && b !is CoreBlock && !Vars.state.rules.bannedBlocks.contains(b) && b.environmentBuildable()
+    }
+    fun canProduce(t: UnitType): Boolean {
+        return !t.isHidden && !t.isBanned && t.hitSize < size * tilesize && t.supportsEnv(Vars.state.rules.env)
+    }
     override fun drawPlanRegion(plan: BuildPlan, list: Eachable<BuildPlan>) {
         drawer.drawPlan(this, plan, list)
     }
@@ -63,14 +90,16 @@ class PayloadUnloader(name: String) : PayloadBlock(name) {
         var loadProgress = 0f
         var scl = 0f // visual
         var commandPos: Vec2? = null
+        var configBlock: Block? = null
+        var configUnit: UnitType? = null
 
         override fun updateTile() {
             super.updateTile()
             val silo = silo
             if(silo != null && payload == null && silo.storedSize > 0) {
-                scl = 0f
-                unloadPayload(silo)
+                if (!unloadPayload(silo)) return
                 spawnEffect.at(this)
+                scl = 0f
                 loadProgress = 0f
             } else {
                 if(loadProgress <= loadTime) loadProgress += edelta()
@@ -82,18 +111,36 @@ class PayloadUnloader(name: String) : PayloadBlock(name) {
             silo = back() as? PayloadSiloBuild
         }
 
-        fun unloadPayload(silo: PayloadSiloBuild) {
-            payload = silo.stored.removeFirst()
+        fun unloadPayload(silo: PayloadSiloBuild): Boolean {
+            if(configUnit != null) {
+                payload = silo.stored.firstOrNull { it is UnitPayload && it.unit.type == configUnit} ?: return false
+                silo.stored.remove(payload)
+            } else if(configBlock != null) {
+                payload = silo.stored.firstOrNull { it is BuildPayload && it.block() == configBlock} ?: return false
+                silo.stored.remove(payload)
+            } else payload = silo.stored.removeFirst()
+
             payVector.set(0f, 0f)
             payRotation = rotation.toFloat()
-
             if(payload is UnitPayload && commandPos != null) (payload as UnitPayload).unit.command().commandPosition(commandPos)
+            return true
         }
         override fun onProximityUpdate() {
             super.onProximityUpdate()
             updateSilo()
         }
-
+        override fun buildConfiguration(table: Table?) {
+            ItemSelection.buildTable(this@PayloadUnloader, table,
+                content.blocks().select { this@PayloadUnloader.canProduce(it)
+                }.`as`<UnlockableContent?>()
+                .add(content.units().select { this@PayloadUnloader.canProduce(it)
+                }.`as`()),
+                { config() as UnlockableContent? }
+            ) { configure(it) }
+        }
+        override fun config(): Any? {
+            return if (configUnit == null) configBlock else configUnit
+        }
         override fun getCommandPosition(): Vec2? {
             return commandPos
         }
