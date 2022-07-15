@@ -7,6 +7,7 @@ import avkott.world.block.defend.Bomb
 import avkott.world.block.payload.PayloadCrafter
 import avkott.world.block.payload.PayloadSilo
 import avkott.world.block.payload.PayloadUnloader
+import avkott.world.draw.DrawConstructPayload
 import mindustry.content.*
 import mindustry.entities.bullet.BasicBulletType
 import mindustry.entities.bullet.ExplosionBulletType
@@ -24,9 +25,11 @@ import mindustry.type.PayloadStack
 import mindustry.type.Weapon
 import mindustry.type.unit.MissileUnitType
 import mindustry.world.Block
+import mindustry.world.blocks.defense.OverdriveProjector
 import mindustry.world.blocks.defense.turrets.ItemTurret
 import mindustry.world.blocks.defense.turrets.LiquidTurret
 import mindustry.world.blocks.heat.HeatProducer
+import mindustry.world.blocks.production.SingleBlockProducer
 import mindustry.world.blocks.production.WallCrafter
 import mindustry.world.blocks.units.UnitAssembler
 import mindustry.world.blocks.units.UnitAssembler.AssemblerUnitPlan
@@ -34,20 +37,51 @@ import mindustry.world.blocks.units.UnitFactory
 import mindustry.world.blocks.units.UnitFactory.UnitPlan
 import mindustry.world.draw.*
 import mindustry.world.meta.Attribute
+import mindustry.world.meta.BuildVisibility
 
 object AvkBlocks {
+    //module
+    lateinit var smallModule: Block
+    lateinit var accelerationProjector: Block
+
+    //production
     lateinit var cliffPulverizer: Block
+
+    //turret
     lateinit var ingen: Block
     lateinit var vapor: Block
     lateinit var barrage: Block
+
+    //crafting
     lateinit var heatComburstor: Block
+
+    //payload crafting
+    lateinit var basicModuleConstructor: Block
     lateinit var payloadMixer: Block
+    //unit & payload
     lateinit var mechCrafter: Block
+    lateinit var vesselFabricator: Block
+
+    //effect
     lateinit var payloadSilo: Block
     lateinit var payloadUnloader: Block
-    lateinit var vesselFabricator: Block
     lateinit var beryliumBomb: Block
+
     fun load() {
+        //module
+        accelerationProjector = OverdriveProjector("acceleration-projector").apply {
+            requirements(
+                Category.distribution,
+                BuildVisibility.sandboxOnly,
+                ItemStack.with(Items.copper, 1)
+            )
+            buildCostMultiplier = 5f
+            health = 500
+            size = 2
+            hasLiquids = true
+            consumePower(4.2f)
+            consumeItem(Items.phaseFabric).boost()
+        }
         //production
         cliffPulverizer = WallCrafter("cliff-pulverizer").apply {
             requirements(Category.production, ItemStack.with(Items.beryllium, 90, Items.silicon, 50, Items.tungsten, 75))
@@ -234,6 +268,29 @@ object AvkBlocks {
             rotateDraw = false
             craftTime = 120f
         }
+        smallModule = Block("small-module").apply {
+            requirements(
+                Category.distribution,
+                BuildVisibility.sandboxOnly,
+                ItemStack.with(Items.beryllium, 24, Items.silicon, 12)
+            )
+            destructible = true
+            buildCostMultiplier = 5f
+            health = 500
+            size = 2
+        }
+        basicModuleConstructor = SingleBlockProducer("basic-module-constructor").apply {
+            requirements(
+                Category.crafting,
+                ItemStack.with(Items.beryllium, 120, Items.tungsten, 70, Items.silicon, 80, Items.oxide, 40)
+            )
+            consumePower(1.2f)
+            regionSuffix = "-dark"
+            size = 3
+            health = 800
+            result = smallModule
+        }
+
         payloadMixer = PayloadCrafter("payload-mixer").apply {
             requirements(
                 Category.crafting,
@@ -246,9 +303,9 @@ object AvkBlocks {
                     ItemStack.with(Items.silicon, 15), 10.5f, 8f
                 ),
                 PayloadCrafter.Recipe(
-                    Blocks.berylliumWallLarge, 240f,
-                    emptyArray(), emptyArray(), 10f, 0f,
-                    ItemStack.with(Items.copper, 50), true
+                    smallModule, 240f,
+                    emptyArray(), emptyArray(), 10f, 2f, ItemStack.with(Items.silicon, 50, Items.beryllium, 30),
+                    emptyArray(), DrawConstructPayload(), true, accelerationProjector
                 )
             )
             regionSuffix = "-dark"
@@ -290,17 +347,18 @@ object AvkBlocks {
             areaSize = 8
             consumeLiquid(Liquids.hydrogen, 8 / 60f)
         }
+
         payloadSilo = PayloadSilo("payload-silo").apply {
             requirements(
-                Category.units,
+                Category.effect,
                 ItemStack.with(Items.thorium, 120, Items.tungsten, 220, Items.phaseFabric, 40, Items.carbide, 80)
             )
-            size = 5
+            size = 6
             payloadSpeed = 1.4f
         }
         payloadUnloader = PayloadUnloader("payload-unloader").apply {
             requirements(
-                Category.units,
+                Category.effect,
                 ItemStack.with(Items.tungsten, 80, Items.oxide, 40, Items.carbide, 80)
             )
             size = 3
@@ -308,6 +366,7 @@ object AvkBlocks {
         }
         //endregion
         //region effect
+
         beryliumBomb = object : Bomb("berylium-bomb") {
             init {
                 requirements(

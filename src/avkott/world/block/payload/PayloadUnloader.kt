@@ -3,14 +3,19 @@ package avkott.world.block.payload
 import arc.graphics.g2d.Draw
 import arc.graphics.g2d.TextureRegion
 import arc.math.Mathf
+import arc.math.geom.Geometry
 import arc.math.geom.Vec2
 import arc.util.Eachable
 import avkott.world.block.payload.PayloadSilo.PayloadSiloBuild
 import avkott.world.draw.DrawPayload
+import mindustry.Vars
+import mindustry.Vars.tilesize
 import mindustry.content.Fx
 import mindustry.entities.units.BuildPlan
 import mindustry.gen.Building
+import mindustry.graphics.Drawf
 import mindustry.graphics.Layer
+import mindustry.graphics.Pal
 import mindustry.world.blocks.payloads.Payload
 import mindustry.world.blocks.payloads.PayloadBlock
 import mindustry.world.blocks.payloads.UnitPayload
@@ -29,10 +34,17 @@ class PayloadUnloader(name: String) : PayloadBlock(name) {
     init {
         rotate = true
         rotateDraw = false
-        solid = true
+        solidifes = true
         commandable = true
     }
-
+    override fun drawOverlay(x: Float, y: Float, rotation: Int) {
+        val r = Geometry.d4[rotation]
+        val xOff = x - r.x * size * tilesize + tilesize / 2 * r.x
+        val yOff = y - r.y * size * tilesize + tilesize / 2 * r.y
+        val tile = Vars.world.tile(xOff.toInt() / 8, yOff.toInt() / 8)?.build
+        if(tile != null && tile is PayloadSiloBuild) Drawf.select(tile.x, tile.y, tile.block.size.toFloat() * tilesize / 2, Pal.accent)
+            else Drawf.select(xOff, yOff, tilesize.toFloat(), Pal.accent)
+    }
     override fun icons(): Array<TextureRegion> {
         return arrayOf(region, outRegion, topRegion)
     }
@@ -77,7 +89,6 @@ class PayloadUnloader(name: String) : PayloadBlock(name) {
 
             if(payload is UnitPayload && commandPos != null) (payload as UnitPayload).unit.command().commandPosition(commandPos)
         }
-
         override fun onProximityUpdate() {
             super.onProximityUpdate()
             updateSilo()

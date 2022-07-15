@@ -6,7 +6,6 @@ import arc.graphics.g2d.TextureRegion
 import arc.math.Mathf
 import arc.util.Eachable
 import avkott.world.draw.DrawPayload
-import mindustry.Vars.tilePayload
 import mindustry.Vars.tilesize
 import mindustry.entities.units.BuildPlan
 import mindustry.gen.Building
@@ -17,18 +16,21 @@ import mindustry.world.blocks.payloads.Payload
 import mindustry.world.blocks.payloads.PayloadBlock
 import mindustry.world.draw.DrawMulti
 import mindustry.world.draw.DrawRegion
+import mindustry.world.meta.Stat
+import mindustry.world.meta.StatUnit
+import mindustry.world.meta.StatValues
 
 class PayloadSilo(name: String) : PayloadBlock(name) {
-    var storage = 8 * tilePayload
+    var storage = 80f * tilesize
 
     init {
-        solid = true
+        solidifes = true
     }
 
     var drawer = DrawMulti(
         DrawRegion(""),
         DrawPayload().apply { drawOut = false; defaultIn = false; drawPlan = false; drawPayload = false },
-        DrawRegion("-top").apply { layer = Layer.blockOver + 0.11f }
+        DrawRegion("-top").apply { layer = Layer.turret + 0.01f }
     )
 
     override fun icons(): Array<TextureRegion> {
@@ -40,6 +42,10 @@ class PayloadSilo(name: String) : PayloadBlock(name) {
         drawer.load(this)
     }
 
+    override fun setStats() {
+        super.setStats()
+        stats.add(Stat.payloadCapacity, StatValues.squared(storage / tilesize, StatUnit.blocks))
+    }
     override fun drawPlanRegion(plan: BuildPlan, list: Eachable<BuildPlan>) {
         drawer.drawPlan(this, plan, list)
     }
@@ -82,6 +88,10 @@ class PayloadSilo(name: String) : PayloadBlock(name) {
             return super.acceptPayload(source, payload) && storedSize + payload.size() <= storage
         }
 
+        override fun onRemoved() {
+            super.onRemoved()
+            stored.forEach { it.dump() }
+        }
         override fun draw() {
             drawer.draw(this)
             Draw.scl(scl)
