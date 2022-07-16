@@ -1,6 +1,7 @@
 package avkott.content
 
-import arc.graphics.g2d.Draw
+import arc.graphics.g2d.Draw.alpha
+import arc.graphics.g2d.Draw.color
 import arc.graphics.g2d.Fill
 import arc.math.Angles
 import arc.math.Rand
@@ -13,23 +14,24 @@ object AvkFx {
     val v = Vec2()
     lateinit var nitrogenSmoke: Effect
     lateinit var shootSmokeMissileSmall: Effect
+    lateinit var instColorShoot: Effect
 
     fun load(){
-        nitrogenSmoke = Effect(90f) { e ->
-            Draw.color(Liquids.nitrogen.color)
-            Draw.alpha(e.fout() * 0.6f)
+        nitrogenSmoke = Effect(90f) {
+            color(Liquids.nitrogen.color)
+            alpha(it.fout() * 0.6f)
 
-            Angles.randLenVectors(e.id.toLong(), 2, 4f + e.finpow() * e.rotation) { x, y ->
-                Fill.circle(e.x + x, e.y + y, e.finpow() * 2.5f)
+            Angles.randLenVectors(it.id.toLong(), 2, 4f + it.finpow() * it.rotation) { x, y ->
+                Fill.circle(it.x + x, it.y + y, it.finpow() * 2.5f)
             }
         }
-        shootSmokeMissileSmall = Effect(70f) { e ->
-            Draw.color(e.color)
-            Draw.alpha(0.5f)
+        shootSmokeMissileSmall = Effect(70f) {
+            color(it.color)
+            alpha(0.5f)
             Angles.randLenVectors(
-                e.id.toLong(), 5, 8f * e.finpow() * 3.3f, e.rotation + 180, 30f
+                it.id.toLong(), 5, 8f * it.finpow() * 3.3f, it.rotation + 180, 30f
             ) { x, y ->
-                Fill.circle(e.x + x, e.y + y, e.fout() * 3f)
+                Fill.circle(it.x + x, it.y + y, it.fout() * 3f)
             }
         }
     }

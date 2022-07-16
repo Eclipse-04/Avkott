@@ -47,6 +47,8 @@ class PayloadUnloader(name: String) : PayloadBlock(name) {
         configurable = true
         saveConfig = true
         outputsPayload = true
+        payloadRotateSpeed = 8f
+
         config(Block::class.java) { tile: PayloadUnloaderBuild, block: Block ->
             tile.configBlock = block
             tile.configUnit = null
