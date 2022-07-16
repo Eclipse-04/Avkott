@@ -46,6 +46,7 @@ class PayloadUnloader(name: String) : PayloadBlock(name) {
         commandable = true
         configurable = true
         saveConfig = true
+        outputsPayload = true
         config(Block::class.java) { tile: PayloadUnloaderBuild, block: Block ->
             tile.configBlock = block
             tile.configUnit = null

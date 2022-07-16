@@ -38,6 +38,7 @@ mindustry {
     }
     run {
         useDefaultDataDir
+        keepOtherMods
     }
 }
 mindustryAssets {

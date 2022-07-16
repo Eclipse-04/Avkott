@@ -9,12 +9,17 @@ import mindustry.content.UnitTypes
 import mindustry.entities.abilities.ArmorPlateAbility
 import mindustry.entities.abilities.MoveEffectAbility
 import mindustry.entities.bullet.BasicBulletType
+import mindustry.entities.bullet.ContinuousFlameBulletType
 import mindustry.entities.effect.MultiEffect
 import mindustry.entities.effect.WaveEffect
+import mindustry.entities.part.DrawPart.PartMove
+import mindustry.entities.part.DrawPart.PartProgress
 import mindustry.entities.part.HoverPart
+import mindustry.entities.part.RegionPart
 import mindustry.entities.pattern.ShootAlternate
 import mindustry.entities.pattern.ShootSpread
 import mindustry.entities.units.UnitController
+import mindustry.gen.Sounds
 import mindustry.gen.Unit
 import mindustry.gen.UnitEntity
 import mindustry.graphics.Pal
@@ -26,6 +31,7 @@ import mindustry.type.unit.ErekirUnitType
 object AvkUnitTypes {
     lateinit var elud: UnitType
     lateinit var aver: UnitType
+    lateinit var obvi: UnitType
 
     fun load(){
         elud = ErekirUnitType("elud").apply {
@@ -155,6 +161,57 @@ object AvkUnitTypes {
                     shootEffect = Fx.shootBigColor
                 }
             })
+            obvi = ErekirUnitType("obvi").apply {
+                constructor = Prov { UnitEntity.create() }
+                flying = true
+                drag = 0.05f
+                speed = 1.95f
+                rotateSpeed = 2.1f
+                accel = 0.07f
+                health = 2500f
+                armor = 5f
+                hitSize = 27.5f
+                engineSize = 0f
+                lowAltitude = true
+
+                setEnginesMirror(
+                    UnitEngine(21/4f, -50/4f, 4f, 270f),
+                    UnitEngine(55/4f, -40/4f, 3.5f, 315f)
+                )
+
+                parts.addAll(
+                    RegionPart("-blade").apply {
+                        moves.add(PartMove(PartProgress.warmup, 1f, -1f, 0f))
+                        mirror = true
+                        heatColor = Color.valueOf("b332c2")
+                    }
+                )
+
+                weapons.add(Weapon("hauptwaffe").apply {
+                    x = 0f
+                    y = -1f
+                    shootY = 0f
+                    alwaysContinuous = true
+                    range = 160f
+                    reload = 20f
+                    mirror = false
+                    shootSound = Sounds.minebeam
+
+                    bullet = ContinuousFlameBulletType().apply {
+                        damage = 60f
+                        length = 160f
+                        knockback = 1.3f
+                        pierceCap = 2
+                        colors = arrayOf(
+                            Color.valueOf("eb7abe").a(0.55f),
+                            Color.valueOf("e189f5").a(0.7f),
+                            Color.valueOf("907ef7").a(0.8f),
+                            Color.valueOf("91a4ff"),
+                            Color.white
+                        )
+                    }
+                })
+            }
         }
     }
 }
