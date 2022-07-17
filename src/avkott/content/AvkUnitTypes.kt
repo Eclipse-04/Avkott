@@ -7,7 +7,6 @@ import mindustry.Vars.tilePayload
 import mindustry.ai.types.BuilderAI
 import mindustry.ai.types.RepairAI
 import mindustry.content.Fx
-import mindustry.content.UnitTypes
 import mindustry.entities.abilities.ArmorPlateAbility
 import mindustry.entities.abilities.MoveEffectAbility
 import mindustry.entities.bullet.BasicBulletType
@@ -21,9 +20,8 @@ import mindustry.entities.part.RegionPart
 import mindustry.entities.pattern.ShootAlternate
 import mindustry.entities.pattern.ShootSpread
 import mindustry.entities.units.UnitController
-import mindustry.gen.Sounds
+import mindustry.gen.*
 import mindustry.gen.Unit
-import mindustry.gen.UnitEntity
 import mindustry.graphics.Pal
 import mindustry.type.UnitType
 import mindustry.type.UnitType.UnitEngine
@@ -39,7 +37,7 @@ object AvkUnitTypes {
 
     fun load(){
         elud = ErekirUnitType("elud").apply {
-            constructor = UnitTypes.elude.constructor
+            constructor = Prov { ElevationMoveUnit.create() }
 
             hovering = true
             shadowElevation = 0.2f
@@ -117,7 +115,7 @@ object AvkUnitTypes {
         }
 
         aver = ErekirUnitType("aver").apply {
-            constructor = Prov { UnitEntity.create() }
+            constructor = Prov { PayloadUnit.create() }
             controller = Func<Unit, UnitController> { RepairAI() }
             lowAltitude = false
             flying = true
