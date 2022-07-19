@@ -5,7 +5,7 @@ import arc.func.Prov
 import arc.graphics.Color
 import arc.math.Mathf
 import arc.math.geom.Vec2
-import avkott.entities.UnitCannonAbility
+import avkott.abilities.UnitCannonAbility
 import mindustry.Vars.tilePayload
 import mindustry.ai.types.BuilderAI
 import mindustry.ai.types.RepairAI

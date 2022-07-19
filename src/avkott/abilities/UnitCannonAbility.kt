@@ -1,4 +1,6 @@
-package avkott.entities
+package avkott.abilities
+
+import mindustry.type.UnitType
 
 import arc.Events
 import arc.graphics.g2d.Draw
@@ -33,10 +35,13 @@ open class UnitCannonAbility : Ability() {
 
     protected var timer = 0f
     protected var units = ArrayList<Unit>()
-
+    override fun init(type: UnitType) {
+        units = ArrayList()
+        rallyPos = arrayOf(Vec2(5 * 8f, -5 * 8f))
+    }
     override fun update(unit: Unit) {
         Log.info(units)
-        units.filter { it.isValid } //filter out dead units
+        units.retainAll { it.isValid } //filter out dead units
 
         if(units.size < droneCount) {
             if(timer > constructTime) {

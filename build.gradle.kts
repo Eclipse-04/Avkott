@@ -4,7 +4,7 @@ import io.github.liplum.mindustry.mindustryRepo
 
 plugins {
     kotlin("jvm") version "1.7.10"
-    id("io.github.liplum.mgpp") version "1.1.1"
+    id("io.github.liplum.mgpp") version "1.1.4"
 }
 sourceSets {
     main {
@@ -24,14 +24,14 @@ dependencies {
 }
 mindustry {
     dependency {
-        mindustry mirror "dbc2aa4cb7"
-        arc on "0af9cd477b"
+        mindustry on "v136"
+        arc on "v136"
     }
     client {
-        mindustry be latest
+        mindustry official "v136.1"
     }
     server {
-        mindustry be latest
+        mindustry official "v136.1"
     }
     deploy {
         baseName = project.name
