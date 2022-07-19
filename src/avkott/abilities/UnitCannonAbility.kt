@@ -1,7 +1,5 @@
 package avkott.abilities
 
-import mindustry.type.UnitType
-
 import arc.Events
 import arc.graphics.g2d.Draw
 import arc.math.Angles
@@ -32,19 +30,18 @@ open class UnitCannonAbility : Ability() {
     var rotation = 0f
     var autoRelease = false
     var droneCount = 2
-
     protected var timer = 0f
     protected var units = ArrayList<Unit>()
-    override fun init(type: UnitType) {
+    override fun copy(): Ability = super.copy().apply {
         units = ArrayList()
         rallyPos = arrayOf(Vec2(5 * 8f, -5 * 8f))
     }
+
     override fun update(unit: Unit) {
         Log.info(units)
         units.retainAll { it.isValid } //filter out dead units
-
-        if(units.size < droneCount) {
-            if(timer > constructTime) {
+        if (units.size < droneCount) {
+            if (timer > constructTime) {
                 val x = unit.x + Angles.trnsx(unit.rotation, spawnY, spawnX)
                 val y = unit.y + Angles.trnsy(unit.rotation, spawnY, spawnX)
 
@@ -63,15 +60,25 @@ open class UnitCannonAbility : Ability() {
             } else timer += Time.delta * state.rules.unitBuildSpeed(unit.team)
         }
     }
+
     fun updateRally() {
         for (u in units) (u.controller() as DroneAI).rally(rallyPos[units.indexOf(u)])
     }
+
     override fun draw(unit: Unit) {
-        if(units.size < droneCount) Draw.draw(layer) {
+        if (units.size < droneCount) Draw.draw(layer) {
             val x = unit.x + Angles.trnsx(unit.rotation, spawnY, spawnX)
             val y = unit.y + Angles.trnsy(unit.rotation, spawnY, spawnX)
 
-            if(timer <= constructTime) Drawf.construct(x, y, unitSpawn.fullIcon, unit.rotation - 90 + rotation, timer / constructTime, 1f, timer)
+            if (timer <= constructTime) Drawf.construct(
+                x,
+                y,
+                unitSpawn.fullIcon,
+                unit.rotation - 90 + rotation,
+                timer / constructTime,
+                1f,
+                timer
+            )
             else Draw.rect(unitSpawn.fullIcon, x, y, unit.rotation - 90 + rotation)
         }
     }
