@@ -26,7 +26,7 @@ open class UnitCannonAbility : Ability() {
     var rallyPos = arrayOf(Vec2(5 * 8f, -5 * 8f))
     var layer = Layer.flyingUnitLow - 0.01f
     var rotation = 0f
-    var autoRelease = false
+    var autoRelease = true
     var droneCount = 2
     protected var timer = 0f
     protected var units = ArrayList<Unit>()

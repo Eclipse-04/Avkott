@@ -24,7 +24,7 @@ open class DroneAI(val owner: Unit) : AIController() {
     fun rally(pos: Vec2) {
         rallyPos = pos
     }
-    fun rally() {
+    open fun rally() {
         Tmp.v2.set(owner.x, owner.y)
         moveTo(Tmp.v1.set(rallyPos).add(Tmp.v2).rotateAround(Tmp.v2, owner.rotation - 90), 2f, 0.6f)
         unit.rotation(Angles.moveToward(unit.rotation, owner.rotation, unit.type.rotateSpeed))
