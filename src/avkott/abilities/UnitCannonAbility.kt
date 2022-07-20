@@ -4,7 +4,6 @@ import arc.Events
 import arc.graphics.g2d.Draw
 import arc.math.Angles
 import arc.math.geom.Vec2
-import arc.util.Log
 import arc.util.Time
 import avkott.ai.DroneAI
 import mindustry.Vars
@@ -17,7 +16,6 @@ import mindustry.gen.Unit
 import mindustry.graphics.Drawf
 import mindustry.graphics.Layer
 
-//todo add multiple unit & rally points support
 open class UnitCannonAbility : Ability() {
     var unitSpawn = UnitTypes.avert
     var constructTime = 60f
@@ -34,29 +32,31 @@ open class UnitCannonAbility : Ability() {
     protected var units = ArrayList<Unit>()
     override fun copy(): Ability = super.copy().apply {
         units = ArrayList()
-        rallyPos = arrayOf(Vec2(5 * 8f, -5 * 8f))
     }
+    //todo find a better method?
+    var ai = fun(owner: Unit): DroneAI = DroneAI(owner)
 
     override fun update(unit: Unit) {
-        Log.info(units)
         units.retainAll { it.isValid } //filter out dead units
         if (units.size < droneCount) {
             if (timer > constructTime) {
-                val x = unit.x + Angles.trnsx(unit.rotation, spawnY, spawnX)
-                val y = unit.y + Angles.trnsy(unit.rotation, spawnY, spawnX)
+                if(autoRelease || unit.isShooting) {
+                    val x = unit.x + Angles.trnsx(unit.rotation, spawnY, spawnX)
+                    val y = unit.y + Angles.trnsy(unit.rotation, spawnY, spawnX)
 
-                spawnEffect.at(x, y, 0f, if (parentizeEffects) unit else null)
-                val unitSpawned = unitSpawn.create(unit.team)
-                unitSpawned.set(x, y)
-                unitSpawned.rotation = unit.rotation + rotation
-                units.add(unitSpawned)
-                unitSpawned.controller(DroneAI(unit))
-                updateRally()
+                    spawnEffect.at(x, y, 0f, if (parentizeEffects) unit else null)
+                    val unitSpawned = unitSpawn.create(unit.team)
+                    unitSpawned.set(x, y)
+                    unitSpawned.rotation = unit.rotation + rotation
+                    units.add(0, unitSpawned)
+                    unitSpawned.controller(ai(unit))
+                    updateRally()
 
-                Events.fire(UnitCreateEvent(unitSpawned, null, unit))
-                if (!Vars.net.client()) unitSpawned.add()
+                    Events.fire(UnitCreateEvent(unitSpawned, null, unit))
+                    if (!Vars.net.client()) unitSpawned.add()
 
-                timer %= constructTime
+                    timer %= constructTime
+                }
             } else timer += Time.delta * state.rules.unitBuildSpeed(unit.team)
         }
     }
@@ -71,13 +71,10 @@ open class UnitCannonAbility : Ability() {
             val y = unit.y + Angles.trnsy(unit.rotation, spawnY, spawnX)
 
             if (timer <= constructTime) Drawf.construct(
-                x,
-                y,
-                unitSpawn.fullIcon,
+                x, y, unitSpawn.fullIcon,
                 unit.rotation - 90 + rotation,
                 timer / constructTime,
-                1f,
-                timer
+                1f, timer
             )
             else Draw.rect(unitSpawn.fullIcon, x, y, unit.rotation - 90 + rotation)
         }

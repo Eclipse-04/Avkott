@@ -6,6 +6,8 @@ import arc.graphics.Color
 import arc.math.Mathf
 import arc.math.geom.Vec2
 import avkott.abilities.UnitCannonAbility
+import avkott.ai.AttackDroneAI
+import avkott.ai.DroneAI
 import mindustry.Vars.tilePayload
 import mindustry.ai.types.BuilderAI
 import mindustry.ai.types.RepairAI
@@ -34,7 +36,6 @@ import mindustry.type.UnitType.UnitEngine
 import mindustry.type.Weapon
 import mindustry.type.unit.ErekirUnitType
 import mindustry.type.weapons.BuildWeapon
-import kotlin.math.sqrt
 
 object AvkUnitTypes {
     lateinit var elud: UnitType
@@ -127,7 +128,7 @@ object AvkUnitTypes {
         aver = ErekirUnitType("aver").apply {
             constructor = Prov { PayloadUnit.create() }
             controller = Func<Unit, UnitController> { RepairAI() }
-            payloadCapacity = sqrt(2f) * tilePayload
+            payloadCapacity = 2f * 2f * tilePayload
             lowAltitude = false
             flying = true
             drag = 0.06f
@@ -266,7 +267,7 @@ object AvkUnitTypes {
             rail = ErekirUnitType("rail").apply {
                 constructor = Prov { PayloadUnit.create() }
                 controller = Func<Unit, UnitController> { BuilderAI() }
-                payloadCapacity = sqrt(3f) * tilePayload
+                payloadCapacity = 3f * 3f * tilePayload
                 flying = true
                 drag = 0.06f
                 speed = 2.1f
@@ -290,11 +291,12 @@ object AvkUnitTypes {
                 for(i in Mathf.signs) {
                     abilities.add(
                         UnitCannonAbility().apply {
-                            rallyPos = arrayOf(Vec2(20f * i, 15f), Vec2(20f * i, 20f))
+                            rallyPos = arrayOf(Vec2(38f * i, 8f), Vec2(20f * i, 20f))
                             spawnX = 48 / 4f * i
                             spawnY = 7 / -4f
                             unitSpawn = railDrone
                             constructTime = 60 * 5f
+                            ai = fun(owner: Unit): DroneAI = AttackDroneAI(owner)
                         }
                     )
                 }
@@ -309,6 +311,7 @@ object AvkUnitTypes {
 
                         mirror = false
                         top = false
+                        cooldownTime = 90f
 
                         bullet = BasicBulletType(8f, 120f).apply {
                             keepVelocity = false
@@ -320,7 +323,7 @@ object AvkUnitTypes {
                             pierceCap = 4
                             pierce = true
                             pierceBuilding = true
-                            hitColor = Pal.berylShot.also { trailColor = it }.also { backColor = it }
+                            hitColor = Pal.heal.also { trailColor = it }.also { backColor = it }
                             frontColor = Color.white
                             trailWidth = 2.8f
                             trailLength = 12

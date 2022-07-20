@@ -6,8 +6,6 @@ import mindustry.gen.Unit
 class AttackDroneAI(owner: Unit) : DroneAI(owner) {
 
     override fun updateMovement() {
-        super.updateMovement()
-
         if(owner.isShooting){
             if (unit.hasWeapons()) {
                 posTeam.set(owner.aimX, owner.aimY)
@@ -19,10 +17,13 @@ class AttackDroneAI(owner: Unit) : DroneAI(owner) {
                     unit.lookAt(posTeam)
                 }
             }
-        } else rally()
+        } else {
+            rally()
+        }
     }
 
     override fun target(x: Float, y: Float, range: Float, air: Boolean, ground: Boolean): Teamc? {
         return if(!owner.isValid && !owner.isShooting) null else posTeam
     }
+    override fun shouldShoot() = owner.isShooting
 }
